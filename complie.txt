@@ -1,0 +1,5 @@
+cmake -B build
+cmake --build build
+./build/Debug/MessageLostGame.exe
+
+cmake --build build && .\build\MessageLostGame.exe
