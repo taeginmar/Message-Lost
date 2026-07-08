@@ -15,9 +15,8 @@ void Player::Draw(){
     DrawRectangleRec(bounds, BLUE);
 }
 
-void Player::Move(){
-    // This function is intentionally left empty as movement is handled in HandleMovement
-}
+// This function is intentionally left empty as movement is handled in HandleMovement
+void Player::Move(){}
 
 void Player::Move(Vector2 velocity, float dt, const std::vector<Rectangle>& walls){
     bounds.x += velocity.x * dt;
@@ -47,13 +46,13 @@ void Player::HandleMovement(float dt, const std::vector<Rectangle>& walls){
 
     currentSpeed = speed;
     if(IsKeyDown(KEY_LEFT_SHIFT) && stamina > 0){
-        currentSpeed = speed * 1.5f;
+        currentSpeed = speed * 2.0f;
         isRunning = true;
         stamina -= 100.0f * dt;
     }
     else{
         isRunning = false;
-        if(stamina < 100.0f) stamina += 5.0f * dt;
+        if(stamina < 100.0f) stamina += 15.0f * dt;
     }
 
     Vector2 final_vel = { velocity.x * currentSpeed, velocity.y * currentSpeed };
