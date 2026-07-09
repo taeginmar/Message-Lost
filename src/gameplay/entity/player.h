@@ -23,6 +23,9 @@ public:
     void HandleMovement(float dt, const std::vector<Rectangle>& walls);
     void Interact();
 
+    void SetHealth(float h) { this->health = h; }
+    void SetStamina(float s) { this->stamina = s; }
+
     //Getters
     float GetCurrentSpeed() const { return currentSpeed; }
     float GetStamina() const { return stamina; }
