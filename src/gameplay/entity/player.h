@@ -26,6 +26,16 @@ public:
     void SetHealth(float h) { this->health = h; }
     void SetStamina(float s) { this->stamina = s; }
 
+    void Heal(float amount) {
+        this->health += amount;
+        if (this->health > this->maxHealth) this->health = this->maxHealth; // ล็อกไม่ให้เกิน MaxHealth
+    }
+
+    void RestoreStamina(float amount) {
+        this->stamina += amount;
+        if (this->stamina > 100.0f) this->stamina = 100.0f; // ล็อกไม่ให้สเตมิน่าเกิน 100 (หรือปรับตามมินิมัมเกมคุณ)
+    }
+
     //Getters
     float GetCurrentSpeed() const { return currentSpeed; }
     float GetStamina() const { return stamina; }

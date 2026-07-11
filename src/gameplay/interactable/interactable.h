@@ -23,6 +23,10 @@ public:
     virtual void Draw(){
         DrawRectangleRec(bounds, BLUE);
     }
+
+    void SetPosition(float x, float y) { this->bounds.x = x; this->bounds.y = y; }
+    void SetActivated(bool status) { this->isActivated = status; }
+    void SetBounds(Rectangle newBounds) { this->bounds = newBounds; }
 };
 
 //Testing Class Only

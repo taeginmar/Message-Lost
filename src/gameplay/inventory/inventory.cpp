@@ -1,37 +1,70 @@
 #include "inventory.h"
 
-//private
-void Inventory::DrawItemIcon(Item* item, float x, float y){
-    Rectangle miniBounds = {x, y, 40, 40};
-
-    if(item->GetPrompt().find("MedKit") != std::string::npos){
-        DrawRectangleRec(miniBounds, RED);
-        DrawRectangle(x + 17, y + 8, 6, 24, WHITE); // แกนตั้งเครื่องหมายบวก (แก้พิกัด x เป็น y ให้ถูกต้อง)
-        DrawRectangle(x + 8, y + 17, 24, 6, WHITE); // แกนนอนเครื่องหมายบวก (แก้พิกัด x เป็น y ให้ถูกต้อง)
-    }else{
-        DrawRectangleRec(miniBounds, ORANGE);
+//Context Menu 
+void InventoryContextMenu::Update(Vector2 mousePos){
+    if(!show) return;
+    for(int i = 0; i < 3; i++){
+        Rectangle optRec = {pos.x, pos.y + (i * 28), 100, 28};
+        if(CheckCollisionPointRec(mousePos, optRec)){
+            selectedOpt = i;
+            break;
+        }
     }
 }
 
-void Inventory::ExecuteContextAction(int action, int index){
-    if(slots[index] == nullptr) return;
+void InventoryContextMenu::Draw(){
+    if(!show) return;
+    DrawRectangle(pos.x, pos.y, 100, 90, RAYWHITE);
+    DrawRectangle(pos.x, pos.y, 100, 90, BLACK);
 
-    if(action == 0){
-        slots[index]->OnInteract();
-        RemoveItem(index);
-    }else if(action == 1){
-        TraceLog(LOG_INFO, "INSPECT: %s", slots[index]->GetPrompt().c_str()); // แก้ไขฟอร์แมต String ล็อกล็อกอินโฟ
-    }else if(action == 2){
-        RemoveItem(index);
+    for(int i = 0; i < 3; i++){
+        Color txtColor = (i == selectedOpt)? RED : BLACK;
+        if(i == selectedOpt){
+            DrawRectangle(pos.x + 2, pos.y + 2 + (i * 28), 96, 26, LIGHTGRAY);
+        }
+        DrawText(option[i].c_str(), pos.x + 10, pos.y + 7 + (i * 28), 16, txtColor);
     }
 }
 
-//public
-bool Inventory::AddItem (Item* item){
-    if(item == nullptr) return false;
+//Inventory Core Usage
+Inventory::Inventory(int size, int cols)
+    :capacity(size), columns(cols), isOpen(false), selectedIndex(0), draggedIndex(-1),
+    lastPickedItemType(""), pickTimer(0.0f)
+{
+    slots.resize(capacity);
+}
+
+
+Inventory::~Inventory() {}
+
+bool Inventory::AddItem(Item* item){
+if (item == nullptr) return false;
+
+    bool oldState = item->IsActivated();
+    item->SetActivated(false);
+    std::string newName = item->GetPrompt();
+    item->SetActivated(oldState);
+
+    for (int i = 0; i < capacity; i++) {
+        if (slots[i].itemDetails != nullptr) {
+            bool oldSlotState = slots[i].itemDetails->IsActivated();
+            slots[i].itemDetails->SetActivated(false);
+            std::string currentName = slots[i].itemDetails->GetPrompt();
+            slots[i].itemDetails->SetActivated(oldSlotState);
+            
+            if ((newName.find("MedKit") != std::string::npos && currentName.find("MedKit") != std::string::npos) ||
+                (newName.find("Energy") != std::string::npos && currentName.find("Energy") != std::string::npos)) {
+                
+                slots[i].count++; // เพิ่มจำนวนชิ้นในสล็อตเดิม
+                return true;      // สั่งออกฟังก์ชันทันทีเพื่อไม่ให้หลุดไปเปิดช่องใหม่
+            }
+        }
+    }
+
     for(int i = 0; i < capacity; i++){
-        if(slots[i] == nullptr){
-            slots[i] = item;
+        if(slots[i].itemDetails == nullptr){
+            slots[i].itemDetails = item;
+            slots[i].count = 1;
             return true;
         }
     }
@@ -40,62 +73,50 @@ bool Inventory::AddItem (Item* item){
 
 void Inventory::RemoveItem(int index){
     if(index >= 0 && index < capacity){
-        slots[index] = nullptr;
+        slots[index].count--;
+        if(slots[index].count <= 0){
+            slots[index].itemDetails = nullptr;
+            slots[index].count = 0;
+        }
     }
 }
 
 void Inventory::MoveItem(int fromIndex, int toIndex){
     if(fromIndex >= 0 && fromIndex < capacity && toIndex >= 0 && toIndex < capacity){
-        Item* temp = slots[fromIndex];
+        InventorySlot temp = slots[fromIndex];
         slots[fromIndex] = slots[toIndex];
         slots[toIndex] = temp;
     }
 }
 
-void Inventory::Toggle(){
+void Inventory::Toggle() {
     isOpen = !isOpen;
-    showContextMenu = false;
+    contextMenu.show = false;
     draggedIndex = -1;
 }
 
-void Inventory::Update(Player& player, std::vector<Item*>& items) {
-    float dt = GetFrameTime();
+bool Inventory::IsOpen() const { return isOpen; }
 
-    // 🌟 1. ลอจิกนับเวลาถอยหลังการแสดงรูปไอเทมขนาดใหญ่ที่เพิ่งเก็บ
-    if (pickTimer > 0.0f) {
-        pickTimer -= dt;
-    }
+//Logic Segment
+void Inventory::HandleItemInteraction(Player& player, std::vector<Item*>& worldItems){
+    if(isOpen) return;
 
-    // 🌟 2. ดึงลอจิกการตรวจจับการเก็บไอเทม (Pick Item) จาก main.cpp มาไว้ที่นี่
-    if (!isOpen) { // เก็บไอเทมได้เฉพาะตอนปิดหน้าต่างกระเป๋า
-        Vector2 playerPos = { player.GetBounds().x, player.GetBounds().y };
-        
-        for (auto item : items) {
-            if (!item->IsActivated() && CheckCollisionRecs(player.GetBounds(), item->GetBounds())) {
-                if (IsKeyPressed(KEY_E)) {
-                    // ตรวจสอบชนิดไอเทมก่อนเก็บเข้าคลัง
-                    if (item->GetPrompt().find("MedKit") != std::string::npos) {
-                        lastPickedItemType = "MedKit";
-                    } else if (item->GetPrompt().find("Energy") != std::string::npos) {
-                        lastPickedItemType = "EnergyDrink";
-                    }
+    for(auto item : worldItems){
+        if(!item->IsActivated() && CheckCollisionRecs(player.GetBounds(), item->GetBounds())){
+            if(IsKeyPressed(KEY_E)){
+                if(item->GetPrompt().find("MedKit") != std::string::npos) lastPickedItemType = "MedKit";
+                else if(item->GetPrompt().find("Energy") != std::string::npos) lastPickedItemType = "Energy Drink";
 
-                    // สั่งเพิ่มเข้าช่องเก็บของ
-                    if (AddItem(item)) {
-                        item->OnInteract(); // ซ่อนไอเทมจากพื้นแผนที่
-                        pickTimer = 1.5f;   // ตั้งเวลาแสดงรูปใหญ่ 1.5 วินาที
-                    }
+                if(AddItem(item)){
+                    item->OnInteract();
+                    pickTimer = 1.5f;
                 }
             }
         }
-        return; // ถ้าปิดกระเป๋าอยู่ ไม่ต้องประมวลผลลอจิกการคลิกในกระเป๋าด้านล่าง
     }
+}
 
-    // --- ด้านล่างนี้คือลอจิกควบคุมกระเป๋าด้วยเมาส์เดิมของคุณตามปกติ ---
-    Vector2 mousePos = GetMousePosition();
-    float startX = 400 - (columns * 60) / 2;
-    float startY = 300 - ((capacity / columns) * 60) / 2;
-
+void Inventory::HandleSlotHover(Vector2 mousePos, float startX, float startY){
     for(int i = 0; i < capacity; i++){
         float slotX = startX + (i % columns) * 60;
         float slotY = startY + (i / columns) * 60;
@@ -104,48 +125,26 @@ void Inventory::Update(Player& player, std::vector<Item*>& items) {
             break;
         }
     }
+}
 
-    if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !showContextMenu){
+void Inventory::HandleContextMenuTrigger(Vector2 mousePos, float startX, float startY){
+    if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !contextMenu.show){
         float slotX = startX + (selectedIndex % columns) * 60;
         float slotY = startY + (selectedIndex / columns) * 60;
-        if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50}) && slots[selectedIndex] != nullptr){
-            showContextMenu = true;
-            contextIndex = selectedIndex;
-            contextMenuPos = mousePos;
-            contextMenuSelected = 0;
+
+        if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50}) && slots[selectedIndex].itemDetails != nullptr){
+            contextMenu.show = true;
+            contextMenu.index = selectedIndex;
+            contextMenu.pos = mousePos;
+            contextMenu.selectedOpt = 0;
         }
     }
+}
 
-    if(showContextMenu){
-        for(int i = 0; i < 3; i++){
-            Rectangle optRec = { contextMenuPos.x, contextMenuPos.y + (i * 28), 100, 28 };
-            if(CheckCollisionPointRec(mousePos, optRec)){
-                contextMenuSelected = i;
-                if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-                    // 🌟 ส่ง player เข้าไปประมวลผลเอฟเฟกต์การใช้งาน
-                    ExecuteContextAction(contextMenuSelected, contextIndex); 
-                    showContextMenu = false;
-                    return;
-                }
-            }
-        }
-        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !CheckCollisionPointRec(mousePos, Rectangle{contextMenuPos.x, contextMenuPos.y, 100, 90})){
-            showContextMenu = false;
-        }
-        return;
-    }
-
+void Inventory::HandleDragAndDrop(Vector2 mousePos, float startX, float startY) {
     if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-        float slotX = startX + (selectedIndex % columns) * 60;
-        float slotY = startY + (selectedIndex / columns) * 60;
-        if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50}) && slots[selectedIndex] != nullptr){
-            draggedIndex = selectedIndex;
-        }
-    }
-
-    if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && draggedIndex != -1){
-        float slotX = startX + (selectedIndex % columns) * 60;
-        float slotY = startY + (selectedIndex / columns) * 60;
+        float slotX = startX + ( selectedIndex % columns ) * 60;
+        float slotY = startY + ( selectedIndex / columns ) * 60;
         if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50})){
             MoveItem(draggedIndex, selectedIndex);
         }
@@ -153,28 +152,114 @@ void Inventory::Update(Player& player, std::vector<Item*>& items) {
     }
 }
 
+void Inventory::ExecuteAction(int action, int index, Player& player, std::vector<Item*>& worldItems) {
+    if (slots[index].itemDetails == nullptr) return;
+
+    Item* currentItem = slots[index].itemDetails;
+
+    if (action == 0) { // คำสั่ง USE
+        bool oldState = currentItem->IsActivated();
+        currentItem->SetActivated(false);
+        std::string itemName = currentItem->GetPrompt();
+        currentItem->SetActivated(oldState);
+
+        float currentHP = player.GetHealth();
+        float currentStamina = player.GetStamina();
+
+        if (itemName.find("MedKit") != std::string::npos) {
+            player.Heal(40.0f); // เลือดเพิ่มทันที และไม่เกิน MaxHealth
+        } else if (itemName.find("Energy") != std::string::npos) {
+            player.RestoreStamina(50.0f); // สเตมิน่าเพิ่มทันที
+        }
+
+        RemoveItem(index); // หักจำนวนไอเทมออก
+    } 
+    else if (action == 1) { // คำสั่ง INSPECT
+        TraceLog(LOG_INFO, "INSPECT: %s", currentItem->GetPrompt().c_str());
+    } 
+    else if (action == 2) { // คำสั่ง REMOVE
+        currentItem->SetPosition(player.GetBounds().x + 5.0f, player.GetBounds().y + 5.0f);
+        currentItem->SetActivated(false); 
+        RemoveItem(index);
+    }
+}
+
+//Specifically Relate to Visualization
+void Inventory::Update(Player& player, std::vector<Item*>& worldItems){
+    if(pickTimer > 0.0f) pickTimer -= GetFrameTime();
+
+    HandleItemInteraction(player, worldItems);
+
+    if(!isOpen) return;
+
+    Vector2 mousePos = GetMousePosition();
+    float startX = 400 - (columns * 60) / 2;
+    float startY = 300 - ((capacity/columns) * 60) / 2;
+
+    HandleSlotHover(mousePos, startX, startY);
+    HandleContextMenuTrigger(mousePos, startX, startY);
+
+    if(contextMenu.show){
+        contextMenu.Update(mousePos);
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            Rectangle menuRec = {contextMenu.pos.x, contextMenu.pos.y, 100, 90};
+            if(CheckCollisionPointRec(mousePos, menuRec)){
+                ExecuteAction(contextMenu.selectedOpt, contextMenu.index, player, worldItems);
+            }
+            contextMenu.show = false;
+        }
+        return;
+    }
+
+    HandleDragAndDrop(mousePos, startX, startY);
+}
+
+void Inventory::DrawSlotGrid(float startX, float startY){
+    for(int i = 0; i < capacity; i++){
+        float slotX = startX + (i % columns) * 60;
+        float slotY = startY + (i / columns) * 60;
+
+        Color boxBorderColor = (i == selectedIndex)? YELLOW : GRAY;
+        int borderThickness = (i == selectedIndex)? 3 : 1;
+
+        DrawRectangle(slotX, slotY, 50, 50, BLACK);
+        DrawRectangleLinesEx(Rectangle{slotX, slotY, 50, 50}, borderThickness, boxBorderColor);
+
+        if(slots[i].itemDetails != nullptr && i != draggedIndex){
+            Item* target = slots[i].itemDetails;
+            Rectangle oldBounds = target->GetBounds();
+            bool oldState = target->IsActivated();
+
+            target->SetPosition(slotX + 10, slotY + 10);
+            target->SetActivated(false);
+            target->Draw();
+
+            target->SetActivated(oldState);
+            target->SetBounds(oldBounds);
+
+            if(slots[i].count > 0){
+                DrawText(TextFormat("%d", slots[i].count), slotX + 38, slotY + 36, 12, WHITE);
+            }
+        }
+    }
+}
+
 void Inventory::Draw(const Player& player){
-    // 🌟 1. ดึงลอจิกการวาดรูปไอเทมขนาดใหญ่ตอนเก็บ (Visual Feedback) มาไว้ที่นี่
-    if (pickTimer > 0.0f && player.GetHealth() > 0) {
+    if(pickTimer > 0.0f && player.GetHealth() > 0){
         DrawRectangle(320, 220, 160, 160, Fade(GRAY, 0.8f));
         DrawRectangleLines(320, 220, 160, 160, WHITE);
-        
-        if (lastPickedItemType == "MedKit") {
+        if(lastPickedItemType == "Medkit"){
             DrawRectangle(360, 260, 80, 80, RED);
-            DrawRectangle(392, 275, 16, 50, WHITE);
-            DrawRectangle(375, 392, 50, 16, WHITE); 
+            DrawRectangle(392, 266, 16, 68, WHITE); DrawRectangle(366, 392, 68, 16, WHITE);
             DrawText("MEDKIT ACQUIRED", 310, 400, 20, GREEN);
-        } 
-        else if (lastPickedItemType == "EnergyDrink") {
-            DrawRectangle(370, 250, 60, 100, ORANGE);
-            DrawRectangle(385, 250, 30, 100, BLUE); 
-            DrawText("ENERGY DRINK ACQUIRED", 280, 400, 20, GOLD);
+        }else if(lastPickedItemType == "Energy Drink"){
+            DrawRectangle(370, 250, 60, 100, ORANGE); DrawRectangle(385, 250, 30, 100, BLUE);
+            DrawText("ENERGY DRINK ACQUIRED", 280, 400, 20, GOLD); 
         }
     }
 
     if(!isOpen) return;
 
-    // --- ส่วนการวาดหน้าต่าง Inventory เดิม (คงเดิมไว้ทั้งหมด) ---
     int rows = capacity / columns;
     float menuWidth = columns * 60 + 40;
     float menuHeight = rows * 60 + 60;
@@ -185,36 +270,23 @@ void Inventory::Draw(const Player& player){
     DrawRectangleLines(startX, startY, menuWidth, menuHeight, WHITE);
     DrawText("INVENTORY", startX + 20, startY + 15, 20, LIGHTGRAY);
 
-    float gridStartX = startX + 20;
-    float gridStartY = startY + 50;
+    DrawSlotGrid(startX + 20, startY + 50);
 
-    for(int i = 0; i < capacity; i++){
-        float slotX = gridStartX + (i % columns) * 60;
-        float slotY = gridStartY + (i / columns) * 60;
-        Color boxBorderColor = (i == selectedIndex)? YELLOW : GRAY;
-        int borderThickness = (i == selectedIndex)? 3 : 1;
-        DrawRectangle(slotX, slotY, 50, 50, BLACK);
-        DrawRectangleLinesEx(Rectangle{slotX, slotY, 50, 50}, borderThickness, boxBorderColor);
-        if(slots[i] != nullptr && i != draggedIndex){
-            DrawItemIcon(slots[i], slotX + 5, slotY + 5);
-        }
+    if(draggedIndex != -1 && slots[draggedIndex].itemDetails != nullptr){
+         Vector2 mousePos = GetMousePosition();
+         Item* target = slots[draggedIndex].itemDetails;
+         Rectangle oldBounds = target->GetBounds();
+         bool oldState = target->IsActivated();
+
+         target->SetPosition(mousePos.x - 10, mousePos.y - 10);
+         target->SetActivated(false);
+         target->Draw();
+
+         target->SetActivated(oldState);
+         target->SetBounds(oldBounds);
+
+         DrawText(TextFormat("%d", slots[draggedIndex].count), mousePos.x + 15, mousePos.y + 15, 12, WHITE);
     }
 
-    if(draggedIndex != -1 && slots[draggedIndex] != nullptr){
-        Vector2 mousePos = GetMousePosition();
-        DrawItemIcon(slots[draggedIndex], mousePos.x - 20, mousePos.y - 20);
-    }
-
-    if(showContextMenu){
-        DrawRectangle(contextMenuPos.x, contextMenuPos.y, 100, 90, RAYWHITE);
-        DrawRectangleLines(contextMenuPos.x, contextMenuPos.y, 100, 90, BLACK);
-        std::string menuOpts[3] = {"Use", "Inspect", "Remove"};
-        for(int i = 0; i < 3; i++){
-            Color txtColor = (i == contextMenuSelected)? RED : BLACK;
-            if(i == contextMenuSelected){
-                DrawRectangle(contextMenuPos.x + 2, contextMenuPos.y + 2 + (i * 28), 96, 26, LIGHTGRAY);
-            }
-            DrawText(menuOpts[i].c_str(), contextMenuPos.x + 10, contextMenuPos.y + 7 + (i * 28), 16, txtColor);
-        }
-    }
+    contextMenu.Draw();
 }

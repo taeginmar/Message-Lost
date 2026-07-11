@@ -4,6 +4,7 @@ Entity::Entity(float x, float y, float width, float height, float health, float 
     : GameObject(x, y, width, height), health(health), speed(speed)
 {
     this->isAlive = (this->health > 0);
+    this->maxHealth = health;
 }
 
 Entity::~Entity(){}

@@ -4,6 +4,7 @@
 class Entity : public GameObject{
 protected:
     float health;
+    float maxHealth;
     float speed;
     bool isAlive;
 public:
@@ -19,6 +20,7 @@ public:
     virtual void TakeDamage(float amount);
 
     //Getters
+    float GetMaxHealth() const { return maxHealth; }
     float GetHealth() const { return health; }
     float GetSpeed() const { return speed; }
     bool IsAlive() const { return isAlive; }
