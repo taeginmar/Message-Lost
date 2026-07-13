@@ -10,7 +10,7 @@ private:
 
 public:
     Medkit(float x, float y, Player& player)
-        : Item(x, y, 20.0f, 20.0f, "Interact", player){}
+        : Item(x, y, 20.0f, 20.0f, "Interact", "MedKit", player){}
 
     void ApplyEffect() override{
         float newHealth = targetPlayer.GetHealth() + healAmount;
@@ -31,7 +31,7 @@ public:
 class EnergyDrink : public Item {
 public:
     EnergyDrink(float x, float y, Player& player)
-        : Item(x, y, 15.0f, 25.0f, "Interact", player) {}
+        : Item(x, y, 15.0f, 25.0f, "Interact", "Energy Drink", player) {}
 
     void ApplyEffect() override {
         targetPlayer.SetStamina(100.0f);

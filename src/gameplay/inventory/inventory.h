@@ -10,6 +10,14 @@ struct InventorySlot{
     int count = 0;
 };
 
+class Container{
+    std::vector<Item*> items;
+public:
+    const std::vector<Item*>& GetItems() const { return items; }
+    void RemoveItem(int index) { items.erase(items.begin() + index); }
+    void AddItem(Item* item) { items.push_back(item); }
+};
+
 class InventoryContextMenu{
 public:
     bool show;
@@ -41,6 +49,11 @@ private:
 
     InventoryContextMenu contextMenu;
 
+    Container* linkedContainer = nullptr;
+    bool isLootingMode = false;
+
+    void DrawDualGrid(float startX, float startY);
+
     void HandleItemInteraction(Player& player, std::vector<Item*>& worldItems);
     void HandleSlotHover(Vector2 mousePos, float startX, float startY);
     void HandleContextMenuTrigger(Vector2 mousePos, float startX, float startY);
@@ -51,6 +64,9 @@ private:
 public:
     Inventory(int size = 12, int cols = 4);
     ~Inventory();
+
+    void OpenLootMode(Container* container);
+    void CloseLootMode();
 
     bool AddItem(Item* item);
     void RemoveItem(int index);

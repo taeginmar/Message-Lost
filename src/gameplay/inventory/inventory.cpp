@@ -42,18 +42,18 @@ if (item == nullptr) return false;
 
     bool oldState = item->IsActivated();
     item->SetActivated(false);
-    std::string newName = item->GetPrompt();
+    std::string newItemType = item->GetItemType();
     item->SetActivated(oldState);
 
     for (int i = 0; i < capacity; i++) {
         if (slots[i].itemDetails != nullptr) {
             bool oldSlotState = slots[i].itemDetails->IsActivated();
             slots[i].itemDetails->SetActivated(false);
-            std::string currentName = slots[i].itemDetails->GetPrompt();
+            std::string currentItemType = slots[i].itemDetails->GetItemType();
             slots[i].itemDetails->SetActivated(oldSlotState);
             
-            if ((newName.find("MedKit") != std::string::npos && currentName.find("MedKit") != std::string::npos) ||
-                (newName.find("Energy") != std::string::npos && currentName.find("Energy") != std::string::npos)) {
+            if ((newItemType.find("MedKit") != std::string::npos && currentItemType.find("MedKit") != std::string::npos) ||
+                (newItemType.find("Energy") != std::string::npos && currentItemType.find("Energy") != std::string::npos)) {
                 
                 slots[i].count++; // เพิ่มจำนวนชิ้นในสล็อตเดิม
                 return true;      // สั่งออกฟังก์ชันทันทีเพื่อไม่ให้หลุดไปเปิดช่องใหม่
@@ -117,6 +117,8 @@ void Inventory::HandleItemInteraction(Player& player, std::vector<Item*>& worldI
 }
 
 void Inventory::HandleSlotHover(Vector2 mousePos, float startX, float startY){
+    if(contextMenu.show) return;
+    
     for(int i = 0; i < capacity; i++){
         float slotX = startX + (i % columns) * 60;
         float slotY = startY + (i / columns) * 60;
@@ -128,15 +130,21 @@ void Inventory::HandleSlotHover(Vector2 mousePos, float startX, float startY){
 }
 
 void Inventory::HandleContextMenuTrigger(Vector2 mousePos, float startX, float startY){
-    if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && !contextMenu.show){
-        float slotX = startX + (selectedIndex % columns) * 60;
-        float slotY = startY + (selectedIndex / columns) * 60;
+    if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){
+        
+        if (contextMenu.show) {
+            contextMenu.show = false;
+        } 
+        else {
+            float slotX = startX + (selectedIndex % columns) * 60;
+            float slotY = startY + (selectedIndex / columns) * 60;
 
-        if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50}) && slots[selectedIndex].itemDetails != nullptr){
-            contextMenu.show = true;
-            contextMenu.index = selectedIndex;
-            contextMenu.pos = mousePos;
-            contextMenu.selectedOpt = 0;
+            if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50}) && slots[selectedIndex].itemDetails != nullptr){
+                contextMenu.show = true;
+                contextMenu.index = selectedIndex;
+                contextMenu.pos = mousePos;
+                contextMenu.selectedOpt = 0;
+            }
         }
     }
 }
@@ -160,22 +168,22 @@ void Inventory::ExecuteAction(int action, int index, Player& player, std::vector
     if (action == 0) { // คำสั่ง USE
         bool oldState = currentItem->IsActivated();
         currentItem->SetActivated(false);
-        std::string itemName = currentItem->GetPrompt();
+        std::string itemName = currentItem->GetItemType();
         currentItem->SetActivated(oldState);
 
         float currentHP = player.GetHealth();
         float currentStamina = player.GetStamina();
 
-        if (itemName.find("MedKit") != std::string::npos) {
-            player.Heal(40.0f); // เลือดเพิ่มทันที และไม่เกิน MaxHealth
-        } else if (itemName.find("Energy") != std::string::npos) {
-            player.RestoreStamina(50.0f); // สเตมิน่าเพิ่มทันที
-        }
+    if (itemName.find("MedKit") != std::string::npos) {
+        player.Heal(40.0f); // เลือดเพิ่มทันที และไม่เกิน MaxHealth
+    } else if (itemName.find("Energy") != std::string::npos) {
+        player.RestoreStamina(50.0f); // สเตมิน่าเพิ่มทันที
+    }
 
         RemoveItem(index); // หักจำนวนไอเทมออก
     } 
     else if (action == 1) { // คำสั่ง INSPECT
-        TraceLog(LOG_INFO, "INSPECT: %s", currentItem->GetPrompt().c_str());
+        TraceLog(LOG_INFO, "INSPECT: %s", currentItem->GetItemType().c_str());
     } 
     else if (action == 2) { // คำสั่ง REMOVE
         currentItem->SetPosition(player.GetBounds().x + 5.0f, player.GetBounds().y + 5.0f);
@@ -193,8 +201,26 @@ void Inventory::Update(Player& player, std::vector<Item*>& worldItems){
     if(!isOpen) return;
 
     Vector2 mousePos = GetMousePosition();
-    float startX = 400 - (columns * 60) / 2;
-    float startY = 300 - ((capacity/columns) * 60) / 2;
+    float startX = 200;
+    float startY = 100;
+
+    if(isLootingMode && linkedContainer != nullptr){
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            float containerY = startY + 250;
+            for(int i = 0; i < linkedContainer->GetItems().size(); i++){
+                float slotX = startX + (i % columns) * 60;
+                float slotY = containerY + (i / columns) * 60;
+
+                if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50})){
+                    Item* itemToLoot = linkedContainer->GetItems()[i];
+                    if(AddItem(itemToLoot)){
+                        linkedContainer->RemoveItem(i);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     HandleSlotHover(mousePos, startX, startY);
     HandleContextMenuTrigger(mousePos, startX, startY);
@@ -212,6 +238,28 @@ void Inventory::Update(Player& player, std::vector<Item*>& worldItems){
     }
 
     HandleDragAndDrop(mousePos, startX, startY);
+}
+
+void Inventory::DrawDualGrid(float startX, float startY){
+    DrawSlotGrid(startX, startY);
+    
+    float containerY = startY + 250;
+    DrawText("Container", startX, containerY - 20, 20, YELLOW);
+
+    const auto& containerItems = linkedContainer->GetItems();
+    for(int i = 0; i < 8; i++){
+        float slotX = startX + (i % columns) * 60;
+        float slotY = containerY + (i / columns) * 60;
+
+        DrawRectangle(slotX, slotY, 50, 50, BLACK);
+        DrawRectangleLines(slotX, slotY, 50, 50, GRAY);
+
+        if(i < containerItems.size()){
+            Item* target = containerItems[i];
+            target->SetPosition(slotX + 10, slotY + 10);
+            target->Draw();
+        }
+    }
 }
 
 void Inventory::DrawSlotGrid(float startX, float startY){
@@ -260,17 +308,17 @@ void Inventory::Draw(const Player& player){
 
     if(!isOpen) return;
 
-    int rows = capacity / columns;
-    float menuWidth = columns * 60 + 40;
-    float menuHeight = rows * 60 + 60;
-    float startX = 400 - (menuWidth / 2);
-    float startY = 300 - (menuHeight / 2);
+    float startX = 200;
+    float startY = 100;
 
-    DrawRectangle(startX, startY, menuWidth, menuHeight, Fade(DARKGRAY, 0.9f));
-    DrawRectangleLines(startX, startY, menuWidth, menuHeight, WHITE);
-    DrawText("INVENTORY", startX + 20, startY + 15, 20, LIGHTGRAY);
+    DrawRectangle(startX - 20, startY - 20, 300, 500, Fade(DARKGRAY, 0.9f));
+    DrawText("PLAYER INVENTORY", startX, startY - 10, 20, LIGHTGRAY);
 
-    DrawSlotGrid(startX + 20, startY + 50);
+    if (isLootingMode) {
+        DrawDualGrid(startX, startY);
+    } else {
+        DrawSlotGrid(startX, startY);
+    }
 
     if(draggedIndex != -1 && slots[draggedIndex].itemDetails != nullptr){
          Vector2 mousePos = GetMousePosition();

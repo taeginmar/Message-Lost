@@ -2,14 +2,16 @@
 
 #include "gameplay/interactable/interactable.h"
 #include "gameplay/entity/player.h"
+#include <string>
 
 class Item : public Interactable{
 protected:
     Player& targetPlayer;
+    std::string itemType;
 
 public:
-    Item(float x, float y, float width, float heigth, std::string prompText, Player& player)
-    : Interactable(x, y, width, heigth, prompText), targetPlayer(player){}
+    Item(float x, float y, float width, float heigth, std::string prompText, std::string type, Player& player)
+    : Interactable(x, y, width, heigth, prompText), itemType(type), targetPlayer(player){}
 
     virtual ~Item() {}
 
@@ -27,4 +29,6 @@ public:
             Interactable::Draw();
         }
     }
+
+    std::string GetItemType() const { return itemType; }
 };
