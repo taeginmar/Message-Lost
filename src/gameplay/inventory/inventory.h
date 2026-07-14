@@ -5,17 +5,13 @@
 #include <vector>
 #include <string>
 
+class Player;
+class Item;
+class Container;
+
 struct InventorySlot{
     Item* itemDetails = nullptr;
     int count = 0;
-};
-
-class Container{
-    std::vector<Item*> items;
-public:
-    const std::vector<Item*>& GetItems() const { return items; }
-    void RemoveItem(int index) { items.erase(items.begin() + index); }
-    void AddItem(Item* item) { items.push_back(item); }
 };
 
 class InventoryContextMenu{
@@ -44,6 +40,7 @@ private:
     int draggedIndex;
 
     //Visual Feedback for Pick Item
+    float currentPanelX, currentPanelY;
     std::string lastPickedItemType;
     float pickTimer;
 
@@ -65,6 +62,7 @@ public:
     Inventory(int size = 12, int cols = 4);
     ~Inventory();
 
+    void OpenContainer(Container* container);
     void OpenLootMode(Container* container);
     void CloseLootMode();
 

@@ -4,6 +4,8 @@
 #include "gameplay/entity/player.h"
 #include <string>
 
+enum ItemType { ITEM_CONSUMABLE, ITEM_KEY, ITEM_QUEST, ITEM_WEAPON };
+
 class Item : public Interactable{
 protected:
     Player& targetPlayer;

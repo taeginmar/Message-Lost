@@ -1,9 +1,15 @@
 #include "player.h"
+#include "gameplay/inventory/inventory.h"
 
 Player::Player(float x, float y, float width, float height, float health, float speed, float stamina)
-    :Entity(x, y, width, height, health, speed), stamina(stamina), isRunning(false), isClouching(false) {}
+    :Entity(x, y, width, height, health, speed), stamina(stamina), isRunning(false), isClouching(false) {
+        inventory = new Inventory(16, 4);
+        this->stamina = stamina;
+    }
 
-Player::~Player() {}
+Player::~Player() {
+    delete inventory;
+}
 
 void Player::Update(float dt){
     if(!isRunning && stamina < 100.0f){

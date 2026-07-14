@@ -21,7 +21,8 @@ private:
     std::vector<Container> containers;
     bool isNearDoor;
 public:
-    MockZoneA();
+    MockZoneA(Player& player);
+
     void Init() override;
     void Update(Player& player, int& nextZone, Vector2& spawnPos) override;
     void Draw() override;
@@ -30,12 +31,14 @@ public:
 class MockZoneB : public Zone {
 private:
     std::vector<Door> doors;
+    std::vector<Container> containers;
     bool isNearDoor;
 public:
-    MockZoneB();
+    MockZoneB(Player& player);
+    
     void Init() override;
     void Update(Player& player, int& nextZone, Vector2& spawnPos) override;
     void Draw() override;
 };
 
-void SetUpMockUpLevel(Level& level);
+void SetUpMockUpLevel(Level& level, Player& player);

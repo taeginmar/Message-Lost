@@ -1,4 +1,5 @@
 #include "inventory.h"
+#include "gameplay/item/container.h"
 
 //Context Menu 
 void InventoryContextMenu::Update(Vector2 mousePos){
@@ -89,10 +90,24 @@ void Inventory::MoveItem(int fromIndex, int toIndex){
     }
 }
 
+void Inventory::OpenContainer(Container* container){
+    if(container == nullptr) return;
+    
+    isOpen = true;
+    isLootingMode = true;
+    linkedContainer = container;
+    contextMenu.show = false;
+}
+
 void Inventory::Toggle() {
     isOpen = !isOpen;
     contextMenu.show = false;
     draggedIndex = -1;
+
+    if(!isOpen){
+        isLootingMode = false;
+        linkedContainer = nullptr;
+    }
 }
 
 bool Inventory::IsOpen() const { return isOpen; }
@@ -118,15 +133,33 @@ void Inventory::HandleItemInteraction(Player& player, std::vector<Item*>& worldI
 
 void Inventory::HandleSlotHover(Vector2 mousePos, float startX, float startY){
     if(contextMenu.show) return;
+
+    int foundIndex = -1;
     
     for(int i = 0; i < capacity; i++){
         float slotX = startX + (i % columns) * 60;
         float slotY = startY + (i / columns) * 60;
+
         if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50})){
-            selectedIndex = i;
+            foundIndex = i;
             break;
         }
     }
+
+    if (isLootingMode && linkedContainer != nullptr) {
+        float containerY = startY + 200; 
+
+        for (int i = 0; i < linkedContainer->GetItems().size(); i++) {
+            float slotX = startX + (i % columns) * 60;
+            float slotY = containerY + (i / columns) * 60;
+
+            if (CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50})) {
+                foundIndex = -2; // ใช้ -2 แทนสถานะว่ากำลัง Hover ตู้
+                break;
+            }
+        }
+    }
+    selectedIndex = foundIndex;
 }
 
 void Inventory::HandleContextMenuTrigger(Vector2 mousePos, float startX, float startY){
@@ -187,7 +220,7 @@ void Inventory::ExecuteAction(int action, int index, Player& player, std::vector
     } 
     else if (action == 2) { // คำสั่ง REMOVE
         currentItem->SetPosition(player.GetBounds().x + 5.0f, player.GetBounds().y + 5.0f);
-        currentItem->SetActivated(false); 
+        currentItem->SetActivated(true); 
         RemoveItem(index);
     }
 }
@@ -195,35 +228,49 @@ void Inventory::ExecuteAction(int action, int index, Player& player, std::vector
 //Specifically Relate to Visualization
 void Inventory::Update(Player& player, std::vector<Item*>& worldItems){
     if(pickTimer > 0.0f) pickTimer -= GetFrameTime();
-
     HandleItemInteraction(player, worldItems);
 
     if(!isOpen) return;
 
-    Vector2 mousePos = GetMousePosition();
-    float startX = 200;
-    float startY = 100;
+    float panelWidth = 320;
+    float panelHeight = isLootingMode ? 540 : 340;
+    currentPanelX = (GetScreenWidth() - panelWidth) / 2.0f;
+    currentPanelY = (GetScreenHeight() - panelHeight) / 2.0f;
 
+    Vector2 mousePos = GetMousePosition();
+
+    // 1. กำหนดพิกัดเริ่มต้นของ Grid ให้ตรงกับใน Draw()
+    float gridStartX = currentPanelX + 40;
+    float gridStartY = currentPanelY + 50;
+    float containerY = gridStartY + 200;
+
+    // 2. เรียกใช้ฟังก์ชันตรวจสอบเมาส์ด้วยพิกัดนี้
+    HandleSlotHover(mousePos, gridStartX, gridStartY);
+    HandleContextMenuTrigger(mousePos, gridStartX, gridStartY);
+
+    // 3. ระบบ Loot จาก Container
     if(isLootingMode && linkedContainer != nullptr){
         if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-            float containerY = startY + 250;
-            for(int i = 0; i < linkedContainer->GetItems().size(); i++){
-                float slotX = startX + (i % columns) * 60;
+            float containerY = gridStartY + 200; // ใช้ค่า Offset ให้สัมพันธ์กับการวาด
+
+            // ต้องประกาศตัวแปร items ก่อนนำไปใช้ในลูป
+            const auto& items = linkedContainer->GetItems(); 
+
+            for(int i = 0; i < (int)items.size(); i++){
+                float slotX = gridStartX + (i % columns) * 60;
                 float slotY = containerY + (i / columns) * 60;
 
                 if(CheckCollisionPointRec(mousePos, Rectangle{slotX, slotY, 50, 50})){
-                    Item* itemToLoot = linkedContainer->GetItems()[i];
+                    Item* itemToLoot = items[i];
                     if(AddItem(itemToLoot)){
                         linkedContainer->RemoveItem(i);
+                        TraceLog(LOG_INFO, "Looted item at index %d", i);
+                        break; // สำคัญ: ต้อง break ทันทีเพื่อป้องกัน Index Out of Bounds หลัง Remove
                     }
-                    break;
                 }
             }
         }
     }
-
-    HandleSlotHover(mousePos, startX, startY);
-    HandleContextMenuTrigger(mousePos, startX, startY);
 
     if(contextMenu.show){
         contextMenu.Update(mousePos);
@@ -237,22 +284,29 @@ void Inventory::Update(Player& player, std::vector<Item*>& worldItems){
         return;
     }
 
-    HandleDragAndDrop(mousePos, startX, startY);
+    HandleDragAndDrop(mousePos, gridStartX, gridStartY);
 }
 
+// เพิ่มใน DrawDualGrid (ฟังก์ชันนี้วาดสล็อต Container อยู่แล้ว)
+// ให้เพิ่มเงื่อนไขตรวจจับเมาส์ใน DrawDualGrid เพื่อวาดกรอบเหลือง
 void Inventory::DrawDualGrid(float startX, float startY){
-    DrawSlotGrid(startX, startY);
+    DrawSlotGrid(startX, startY); // วาด Inventory ปกติ
     
-    float containerY = startY + 250;
+    float containerY = startY + 250; 
     DrawText("Container", startX, containerY - 20, 20, YELLOW);
 
     const auto& containerItems = linkedContainer->GetItems();
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 8; i++){ 
         float slotX = startX + (i % columns) * 60;
         float slotY = containerY + (i / columns) * 60;
 
         DrawRectangle(slotX, slotY, 50, 50, BLACK);
-        DrawRectangleLines(slotX, slotY, 50, 50, GRAY);
+        
+        if (CheckCollisionPointRec(GetMousePosition(), Rectangle{slotX, slotY, 50, 50})) {
+            DrawRectangleLinesEx(Rectangle{slotX, slotY, 50, 50}, 3, YELLOW);
+        } else {
+            DrawRectangleLines(slotX, slotY, 50, 50, GRAY);
+        }
 
         if(i < containerItems.size()){
             Item* target = containerItems[i];
@@ -261,7 +315,6 @@ void Inventory::DrawDualGrid(float startX, float startY){
         }
     }
 }
-
 void Inventory::DrawSlotGrid(float startX, float startY){
     for(int i = 0; i < capacity; i++){
         float slotX = startX + (i % columns) * 60;
@@ -308,16 +361,21 @@ void Inventory::Draw(const Player& player){
 
     if(!isOpen) return;
 
-    float startX = 200;
-    float startY = 100;
+    float panelWidth = 320;
+    float panelHeight = isLootingMode? 540: 340;
 
-    DrawRectangle(startX - 20, startY - 20, 300, 500, Fade(DARKGRAY, 0.9f));
-    DrawText("PLAYER INVENTORY", startX, startY - 10, 20, LIGHTGRAY);
+    DrawRectangle(currentPanelX, currentPanelY, panelWidth, panelHeight, Fade(DARKGRAY, 0.9f));
+    DrawRectangleLinesEx(Rectangle{currentPanelX, currentPanelY, panelWidth, panelHeight}, 2, RAYWHITE);
+
+    DrawText("PLAYER INVENTORY", currentPanelX + 20, currentPanelY + 10, 20, LIGHTGRAY);
+
+    float gridX = currentPanelX + 40;
+    float gridY = currentPanelY + 50;
 
     if (isLootingMode) {
-        DrawDualGrid(startX, startY);
+        DrawDualGrid(gridX, gridY);
     } else {
-        DrawSlotGrid(startX, startY);
+        DrawSlotGrid(gridX, gridY);
     }
 
     if(draggedIndex != -1 && slots[draggedIndex].itemDetails != nullptr){

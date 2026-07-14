@@ -2,12 +2,16 @@
 #include "gameplay/entity/entity.h"
 #include <vector>
 
+class Inventory;
+
 class Player : public Entity{
 private:
     float currentSpeed = 0.0f; 
     float stamina;
     bool isRunning;
     bool isClouching;
+
+    Inventory* inventory;
 
 public:
     Player(float x, float y, float width, float height, float health, float speed, float stamina);
@@ -35,6 +39,8 @@ public:
         this->stamina += amount;
         if (this->stamina > 100.0f) this->stamina = 100.0f; // ล็อกไม่ให้สเตมิน่าเกิน 100 (หรือปรับตามมินิมัมเกมคุณ)
     }
+
+    Inventory* GetInventory() const { return inventory; }
 
     //Getters
     float GetCurrentSpeed() const { return currentSpeed; }

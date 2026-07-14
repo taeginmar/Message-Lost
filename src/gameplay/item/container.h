@@ -9,6 +9,10 @@ private:
 public:
     Container(Rectangle b) : bounds(b) {}
 
+    bool IsPlayerNear(Rectangle playerBounds) const { 
+        return CheckCollisionRecs(playerBounds, bounds);
+    }
+
     void AddItem(Item* item) { items.push_back(item);}
     std::vector<Item*>& GetItems() { return items; }
     void RemoveItem(int index) { items.erase(items.begin() + index); }
