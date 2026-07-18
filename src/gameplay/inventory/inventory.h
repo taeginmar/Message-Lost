@@ -1,77 +1,56 @@
 #pragma once
-
 #include "raylib.h"
-#include "gameplay/item/consumable.h"
 #include <vector>
 #include <string>
+#include "core/ui_manager.h"
+#include "gameplay/entity/player.h"
+#include "gameplay/item/container.h"
+#include "gameplay/item/item.h"
 
-class Player;
-class Item;
-class Container;
+class Item; class Container; class Player;
 
-struct InventorySlot{
+struct InventorySlot {
     Item* itemDetails = nullptr;
     int count = 0;
+    bool isLocked = false;
 };
 
-class InventoryContextMenu{
+class InventoryContextMenu {
 public:
-    bool show;
-    int index;
-    Vector2 pos;
-    int selectedOpt;
-    std::string option[3];
-
-    InventoryContextMenu() : show(false), index(-1), pos{0,0},selectedOpt(0) {
-        option[0] = "USE", option[1] = "INSPECT", option[2] = "REMOVE";
-    }
-
+    bool show = false;
+    int index = -1;
+    int selectedOpt = 0;
+    Vector2 pos = { 0, 0 };
+    std::string option[3] = { "Use", "Inspect", "Drop" };
     void Update(Vector2 mousePos);
     void Draw();
 };
 
-class Inventory{
+class Inventory {
 private:
-    int capacity;
+    int capacity; int columns; int selectedIndex; int draggedIndex;
+    bool isOpen; bool isLootingMode; float pickTimer;
+    Container* linkedContainer;
     std::vector<InventorySlot> slots;
-    bool isOpen;
-    int selectedIndex;
-    int columns;
-    int draggedIndex;
-
-    //Visual Feedback for Pick Item
-    float currentPanelX, currentPanelY;
-    std::string lastPickedItemType;
-    float pickTimer;
-
     InventoryContextMenu contextMenu;
-
-    Container* linkedContainer = nullptr;
-    bool isLootingMode = false;
-
-    void DrawDualGrid(float startX, float startY);
 
     void HandleItemInteraction(Player& player, std::vector<Item*>& worldItems);
     void HandleSlotHover(Vector2 mousePos, float startX, float startY);
     void HandleContextMenuTrigger(Vector2 mousePos, float startX, float startY);
     void HandleDragAndDrop(Vector2 mousePos, float startX, float startY);
-    void ExecuteAction(int action, int index, Player& player, std::vector<Item*>& worldItems);
-    void DrawSlotGrid(float startX, float startY);
 
 public:
-    Inventory(int size = 12, int cols = 4);
+    Inventory(int size, int cols);
     ~Inventory();
-
-    void OpenContainer(Container* container);
-    void OpenLootMode(Container* container);
-    void CloseLootMode();
-
     bool AddItem(Item* item);
     void RemoveItem(int index);
     void MoveItem(int fromIndex, int toIndex);
+    void OpenContainer(Container* container);
     void Toggle();
     bool IsOpen() const;
-
     void Update(Player& player, std::vector<Item*>& worldItems);
+    void ExecuteAction(int action, int index, Player& player, std::vector<Item*>& worldItems);
     void Draw(const Player& player);
+    void UnlockSlot(int index);
+    void UnlockSlots(int count);
 };

@@ -11,6 +11,8 @@ protected:
     Player& targetPlayer;
     std::string itemType;
 
+    int stackCount = 1;
+
 public:
     Item(float x, float y, float width, float heigth, std::string prompText, std::string type, Player& player)
     : Interactable(x, y, width, heigth, prompText), itemType(type), targetPlayer(player){}
@@ -18,13 +20,10 @@ public:
     virtual ~Item() {}
 
     void OnInteract() override {
-        if(!isActivated){
-            isActivated = true;
-            ApplyEffect();
-        }
+        isActivated = true;
     }
 
-    virtual void ApplyEffect() = 0;
+    virtual bool ApplyEffect(Player& player) = 0;
 
     void Draw(){
         if(!isActivated){
@@ -33,4 +32,6 @@ public:
     }
 
     std::string GetItemType() const { return itemType; }
+    int GetStackCount() const { return stackCount; }
+    void SetStackCount(int count) { stackCount = count; }
 };

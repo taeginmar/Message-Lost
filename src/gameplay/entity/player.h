@@ -31,8 +31,11 @@ public:
     void SetStamina(float s) { this->stamina = s; }
 
     void Heal(float amount) {
-        this->health += amount;
-        if (this->health > this->maxHealth) this->health = this->maxHealth; // ล็อกไม่ให้เกิน MaxHealth
+        health += amount;
+
+        if (health > 100.0f) {
+            health = 100.0f;
+        }
     }
 
     void RestoreStamina(float amount) {

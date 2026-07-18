@@ -1,35 +1,33 @@
 #include "raylib.h"
-#include <vector>
-#include "gameplay/entity/player.h"
 #include "levels/level.h"
-#include "gameplay/inventory/inventory.h"
 #include "levels/Mock_Up_Level/mock_zones.h"
+#include "gameplay/entity/player.h"
 
-int main() {
-    InitWindow(800, 600, "Test SandBox");
-    Player player(400, 300, 30, 30, 100, 200, 100);
-    std::vector<Item*> worldItems;
-    
-    Level testLevel;
-    SetUpMockUpLevel(testLevel, player);
+void SetUpMockUpLevel(Level& level, Player& player);
 
-    while(!WindowShouldClose()){
+int main(){
+    InitWindow(800, 600, "Mock Up Game Test");
+    SetTargetFPS(60);
+
+   Player player(400, 300, 40, 40, 100.0f, 200.0f, 100.0f);
+   Level level;
+
+   SetUpMockUpLevel(level, player); //Chapter 0 : Mock Up Level
+
+   while(!WindowShouldClose()){
         float dt = GetFrameTime();
-        testLevel.Update(player);
-
-        player.HandleMovement(dt, testLevel.GetCurrentZone()->GetWalls());
-        player.GetInventory()->Update(player, worldItems);
-
-        if(IsKeyPressed(KEY_TAB)){
-            player.GetInventory()->Toggle();
-        }
+        
+        player.Update(dt);
+        level.Update(player, dt);
 
         BeginDrawing();
-        testLevel.Draw();
+        ClearBackground(GRAY);
+
+        level.Draw();
         player.Draw();
-        player.GetInventory()->Draw(player);
         EndDrawing();
-    }
-    CloseWindow();
-    return 0;
+   }
+
+   CloseWindow();
+   return 0;
 }

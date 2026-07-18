@@ -4,6 +4,7 @@
 Player::Player(float x, float y, float width, float height, float health, float speed, float stamina)
     :Entity(x, y, width, height, health, speed), stamina(stamina), isRunning(false), isClouching(false) {
         inventory = new Inventory(16, 4);
+        inventory->UnlockSlots(6);
         this->stamina = stamina;
     }
 
@@ -15,10 +16,15 @@ void Player::Update(float dt){
     if(!isRunning && stamina < 100.0f){
         stamina += 5.0f * dt;
     }
+
 }
 
 void Player::Draw(){
     DrawRectangleRec(bounds, BLUE);
+
+    if(inventory && inventory->IsOpen()){
+        inventory->Draw(*this);
+    }
 }
 
 // This function is intentionally left empty as movement is handled in HandleMovement

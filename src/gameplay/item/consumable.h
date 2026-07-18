@@ -12,11 +12,14 @@ public:
     Medkit(float x, float y, Player& player)
         : Item(x, y, 20.0f, 20.0f, "Interact", "MedKit", player){}
 
-    void ApplyEffect() override{
-        float newHealth = targetPlayer.GetHealth() + healAmount;
-        if(newHealth > 100.0f) newHealth = 100.0f;
+    bool ApplyEffect(Player& player) override {
 
-        targetPlayer.SetHealth(newHealth);
+        if (player.GetHealth() >= 100.0f) {
+            return false;
+        }
+
+        player.Heal(30.0f);
+        return true;
     }
 
     void Draw() override{
@@ -33,10 +36,16 @@ public:
     EnergyDrink(float x, float y, Player& player)
         : Item(x, y, 15.0f, 25.0f, "Interact", "Energy Drink", player) {}
 
-    void ApplyEffect() override {
-        targetPlayer.SetStamina(100.0f);
-    }
+    bool ApplyEffect(Player& player) override {
 
+        if (player.GetStamina() >= 100.0f) {
+            return false;
+        }
+
+        player.SetStamina(100.0f);
+        return true;
+    }
+    
     void Draw() override {
         if(!isActivated){
             DrawRectangleRec(bounds, ORANGE);
