@@ -3,8 +3,12 @@
 
 Player::Player(float x, float y, float width, float height, float health, float speed, float stamina)
     :Entity(x, y, width, height, health, speed), stamina(stamina), isRunning(false), isClouching(false) {
+        counterRange = 40.0f;
+        counterDamage = 25.0f;
+        counterStaminaCost = 70.0f;
+
         inventory = new Inventory(16, 4);
-        inventory->UnlockSlots(6);
+        inventory->UnlockSlots(5);
         this->stamina = stamina;
     }
 
@@ -14,7 +18,7 @@ Player::~Player() {
 
 void Player::Update(float dt){
     if(!isRunning && stamina < 100.0f){
-        stamina += 5.0f * dt;
+        stamina += 3.0f * dt;
     }
 
 }
@@ -60,21 +64,70 @@ void Player::HandleMovement(float dt, const std::vector<Rectangle>& walls){
     if(IsKeyDown(KEY_LEFT_SHIFT) && stamina > 0){
         currentSpeed = speed * 2.0f;
         isRunning = true;
-        stamina -= 100.0f * dt;
+        stamina -= 50.0f * dt;
     }
     else{
         isRunning = false;
-        if(stamina < 100.0f) stamina += 15.0f * dt;
+        if(stamina < 100.0f) stamina += 10.0f * dt;
     }
 
     Vector2 final_vel = { velocity.x * currentSpeed, velocity.y * currentSpeed };
     Move(final_vel, dt, walls);
 }
 
-void Player::Attack(){
+void Player::Attack(){}
 
+void Player::Attack(std::vector<Enemy*>& enemies){
+    if(!IsKeyPressed(KEY_F))
+        return;
+
+    Rectangle playerBounds = GetBounds();
+
+    Vector2 playerCenter = {
+        playerBounds.x + playerBounds.width * 0.5f,
+        playerBounds.y + playerBounds.height * 0.5f
+    };
+
+    for(auto* enemy : enemies){
+        if(enemy == nullptr)
+            continue;
+
+        Rectangle enemyBounds = enemy->GetBounds();
+
+        Vector2 enemyCenter = {
+            enemyBounds.x + enemyBounds.width * 0.5f,
+            enemyBounds.y + enemyBounds.height * 0.5f
+        };
+
+        float distance = Vector2Distance(playerCenter, enemyCenter);
+
+        if(distance > counterRange)
+            continue;
+
+        if(stamina < counterStaminaCost)
+            return;
+
+        Vector2 attackDirection = {
+            enemyCenter.x - playerCenter.x,
+            enemyCenter.y - playerCenter.y
+        };
+
+        attackDirection = Vector2Normalize(attackDirection);
+
+        float enemyHpBefore = enemy->GetHealth();
+
+        enemy->TakeCounterAttack(
+            counterDamage,
+            attackDirection
+        );
+
+        float enemyHpAfter = enemy->GetHealth();
+        float damageDealt = enemyHpBefore - enemyHpAfter;
+
+        stamina -= counterStaminaCost;
+
+        TraceLog(LOG_INFO, TextFormat("Counter Attack Success! Damage: %.0f | Enemy HP: %.0f -> %.0f", damageDealt, enemyHpBefore, enemyHpAfter));
+    }
 }
 
-void Player::Interact(){
-
-}
+void Player::Interact(){}

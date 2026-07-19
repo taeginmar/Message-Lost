@@ -39,6 +39,9 @@ public:
 
     void ReturnToSpawn(float dt, const std::vector<Rectangle>& walls);
 
+    void TakeCounterAttack(float damage, Vector2 attackDirection);
+    bool IsDead() const { return health <= 0.0f; }
+
     //Getters
     float GetSensing() const { return searchTimer; }
     EnemyState GetCurrentState() const { return currentState; }
@@ -70,4 +73,8 @@ private:
     float damage;
 
     bool isAttacked = false;
+
+    bool isStunned = false;
+    float stunTimer = 0.0f;
+    float knockbackForce = 40.0f;
 };

@@ -7,12 +7,7 @@ void UIManager::DrawNotebookBackground(float panelX, float panelY, float width, 
     DrawRectangle(panelX, panelY, width, height, Fade(DARKGRAY, 0.7f));
     DrawRectangleLinesEx({ panelX, panelY, width, height }, 2, DARKGRAY);
 
-    DrawLineEx(
-        { panelX + width / 2.0f, panelY },
-        { panelX + width / 2.0f, panelY + height },
-        4,
-        DARKGRAY
-    );
+    DrawLineEx({ panelX + width / 2.0f, panelY },{ panelX + width / 2.0f, panelY + height },4 ,DARKGRAY);
 }
 
 void UIManager::DrawStatBar(
@@ -40,8 +35,10 @@ void UIManager::DrawStatBar(
 }
 
 void UIManager::DrawProfileSection(const Player& player, float x, float y) {
-    DrawRectangle(x, y, 100, 100, GRAY);
-    DrawText("PROFILE", x + 20, y + 42, 12, DARKGRAY);
+    DrawRectangle(x, y, 100, 100, Fade(BLACK, 0.35f));
+    DrawRectangleLinesEx({x, y, 100, 100}, 2, LIGHTGRAY);
+
+    DrawText("PROFILE", x + 20, y + 42, 12, LIGHTGRAY);
 
     DrawStatBar("HP", player.GetHealth(), 100.0f, x + 120, y, RED);
     DrawStatBar("STAMINA", player.GetStamina(), 100.0f, x + 120, y + 50, BLUE);
@@ -49,34 +46,14 @@ void UIManager::DrawProfileSection(const Player& player, float x, float y) {
 
 void UIManager::DrawInventorySection(const InventoryUIData& data, float x, float y) {
     DrawText("INVENTORY", x, y, 20, LIGHTGRAY);
-
-    DrawSlotGrid(
-        data.slots,
-        data.capacity,
-        data.columns,
-        data.selectedIndex,
-        data.draggedIndex,
-        x,
-        y + 40,
-        false
-    );
+    DrawSlotGrid(data.slots, data.capacity, data.columns, data.selectedIndex, data.draggedIndex, x, y + 40, false );
 }
 
 void UIManager::DrawContainerSection(const InventoryUIData& data, float x, float y) {
     if (!data.isLootingMode) return;
 
     DrawText("CONTAINER", x, y, 20, LIGHTGRAY);
-
-    DrawSlotGrid(
-        data.containerSlots,
-        (int)data.containerSlots.size(),
-        data.columns,
-        -1,
-        -1,
-        x,
-        y + 40,
-        true
-    );
+    DrawSlotGrid(data.containerSlots, (int)data.containerSlots.size(), data.columns, -1, -1, x, y + 40, true );
 }
 
 void UIManager::DrawSlotGrid(
@@ -96,15 +73,33 @@ void UIManager::DrawSlotGrid(
         float slotX = startX + (i % columns) * SLOT_SIZE;
         float slotY = startY + (i / columns) * SLOT_SIZE;
 
-        Rectangle slotRec = {
-            slotX,
-            slotY,
-            SLOT_SIZE,
-            SLOT_SIZE
-        };
+        Rectangle slotRec = {slotX, slotY, SLOT_SIZE, SLOT_SIZE};
 
-        DrawRectangleRec(slotRec, BLACK);
+        Color slotColor = BLACK;
+
+        if (isContainer && slots[i].isLocked) {
+            if (std::sin(GetTime() * 20.0f) > 0.0f)
+                slotColor = RED;
+        }
+
+        DrawRectangleRec(slotRec, slotColor);
         DrawRectangleLinesEx(slotRec, 1, LIGHTGRAY);
+
+        if (!isContainer && slots[i].isLocked) {
+           // DrawRectangleRec(slotRec, DARKGRAY);
+
+            DrawLineEx(
+                { slotX + 8, slotY + 8 },
+                { slotX + SLOT_SIZE - 8, slotY + SLOT_SIZE - 8 },3,DARKGRAY
+            );
+
+            DrawLineEx(
+                { slotX + SLOT_SIZE - 8, slotY + 8 },
+                { slotX + 8, slotY + SLOT_SIZE - 8 },3, DARKGRAY
+            );
+
+            continue;
+        }
 
         if (slots[i].itemPtr != nullptr && slots[i].count > 0) {
             Item* item = static_cast<Item*>(slots[i].itemPtr);
@@ -114,13 +109,7 @@ void UIManager::DrawSlotGrid(
             item->Draw();
 
             if (slots[i].count > 1) {
-                DrawText(
-                    TextFormat("%d", slots[i].count),
-                    slotX + 35,
-                    slotY + 35,
-                    12,
-                    WHITE
-                );
+                DrawText(TextFormat("%d", slots[i].count),slotX + 35,slotY + 35, 12, WHITE);
             }
         }
 
@@ -141,8 +130,49 @@ void UIManager::DrawInventoryUI(const InventoryUIData& data, const Player& playe
 
     DrawNotebookBackground(panelX, panelY, NOTEBOOK_WIDTH, NOTEBOOK_HEIGHT);
 
-    float leftPageX = panelX + 40.0f;
-    DrawProfileSection(player, leftPageX, panelY + 40.0f);
+    // =====================================================
+    // LEFT PAGE
+    // =====================================================
+
+    float leftPageX = panelX + 25.0f;
+
+    DrawProfileSection(player, leftPageX, panelY + 25.0f);
+
+    // -----------------------------------------------------
+    // OBJECTIVE
+    // -----------------------------------------------------
+
+    float objectiveY = panelY + 160.0f;
+
+    DrawRectangle(leftPageX, objectiveY, 300, 180, Fade(BLACK, 0.35f));
+    DrawRectangleLinesEx({ leftPageX, objectiveY, 300, 180 }, 2, LIGHTGRAY);
+
+    DrawText("OBJECTIVE", leftPageX + 10, objectiveY + 10, 12, WHITE);
+    DrawLine(leftPageX + 10, objectiveY + 35, leftPageX + 290, objectiveY + 35, LIGHTGRAY);
+
+    DrawText("- Find a way out", leftPageX + 15, objectiveY + 50, 11, LIGHTGRAY);
+    DrawText("- Search useful items", leftPageX + 15, objectiveY + 75, 11, LIGHTGRAY);
+    DrawText("- Avoid hostile enemies", leftPageX + 15, objectiveY + 100, 11, LIGHTGRAY);
+
+    // -----------------------------------------------------
+    // KEY BINDINGS
+    // -----------------------------------------------------
+
+    float keybindY = objectiveY + 190.0f;
+
+    DrawRectangle(leftPageX, keybindY, 300, 130, Fade(BLACK, 0.35f));
+    DrawRectangleLinesEx({ leftPageX, keybindY, 300, 130 }, 2, LIGHTGRAY);
+
+    DrawText("KEY BINDINGS", leftPageX + 10, keybindY + 10, 12, WHITE);
+    DrawLine(leftPageX + 10, keybindY + 35, leftPageX + 290, keybindY + 35, LIGHTGRAY);
+
+    DrawText("[TAB] Open Inventory", leftPageX + 15, keybindY + 50, 11, LIGHTGRAY);
+    DrawText("[E] Loot / Interact", leftPageX + 15, keybindY + 75, 11, LIGHTGRAY);
+    DrawText("[Right Click] Item Menu", leftPageX + 15, keybindY + 100, 11, LIGHTGRAY);
+
+    // =====================================================
+    // RIGHT PAGE
+    // =====================================================
 
     float rightPageX = panelX + (NOTEBOOK_WIDTH / 2.0f) + 40.0f;
 

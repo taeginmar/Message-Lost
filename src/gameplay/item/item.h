@@ -19,8 +19,12 @@ public:
 
     virtual ~Item() {}
 
-    void OnInteract() override {
-        isActivated = true;
+    void OnInteract() override{
+        if(!isActivated)
+        {
+            isActivated = true;
+            ApplyEffect(targetPlayer);
+        }
     }
 
     virtual bool ApplyEffect(Player& player) = 0;

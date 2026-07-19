@@ -58,18 +58,32 @@ void Enemy::Update(float dt){
 }
 
 void Enemy::Update(float dt, const std::vector<Rectangle>& walls){
+    if(IsDead()) return;
+    
     if(targetPlayer == nullptr) return;
+
+    if(stunTimer > 0.0f){
+        stunTimer -= dt;
+
+        if(stunTimer <= 0.0f){
+            stunTimer = 0.0f;
+            isStunned = false;
+        }
+        return;
+    }
 
     if(attackTimer > 0.0f){
         attackTimer -= dt;
     }
-        
+
     SensePlayer(*targetPlayer, walls);
 
     switch(currentState){
         case EnemyState::NORMAL:
-            if(currentAction == NormalAction::IDLE) DoIdleAction(dt);
-            else if(currentAction == NormalAction::PATROL) DoPatrolAction(dt, walls);
+            if(currentAction == NormalAction::IDLE)
+                DoIdleAction(dt);
+            else if(currentAction == NormalAction::PATROL)
+                DoPatrolAction(dt, walls);
             break;
 
         case EnemyState::CHASE:
@@ -87,10 +101,14 @@ void Enemy::Update(float dt, const std::vector<Rectangle>& walls){
         case EnemyState::SEARCH:
             break;
     }
-    
 }
 
 void Enemy::Draw(){
+    if(IsDead()){
+        DrawRectangleRec(bounds, PURPLE);
+        return;
+    }
+
     if(currentState == EnemyState::NORMAL && currentAction == NormalAction::IDLE){
         float rotation = actionTimer * 90.0f;
         Vector2 origin = { bounds.width/2, bounds.height/2 };
@@ -247,4 +265,22 @@ void Enemy::ReturnToSpawn(float dt, const std::vector<Rectangle>& walls){
     }
 
     TraceLog(LOG_INFO, "Enemy Return.");
+}
+
+void Enemy::TakeCounterAttack(float damage, Vector2 attackDirection){
+    health -= damage;
+
+    if(health < 0.0f){
+        health = 0.0f;
+    }
+
+    if(!IsDead()){
+        bounds.x += attackDirection.x * knockbackForce;
+        bounds.y += attackDirection.y * knockbackForce;
+
+        isStunned = true;
+        stunTimer = 0.75f;
+    }
+
+    TraceLog(LOG_INFO, "Enemy hit by Counter Attack!");
 }

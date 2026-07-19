@@ -1,8 +1,10 @@
 #pragma once
-#include "gameplay/entity/entity.h"
+
 #include <vector>
+#include "gameplay/entity/enemy.h"
 
 class Inventory;
+class Enemy;
 
 class Player : public Entity{
 private:
@@ -13,9 +15,17 @@ private:
 
     Inventory* inventory;
 
+    float counterRange;
+    float counterDamage;
+    float counterStaminaCost;
+
 public:
     Player(float x, float y, float width, float height, float health, float speed, float stamina);
     virtual ~Player();
+
+    std::vector<Enemy*>* allEnemies = nullptr; 
+
+    void SetEnemyReference(std::vector<Enemy*>* enemies) { allEnemies = enemies; }
 
     void Update(float dt) override;
     void Draw() override;
@@ -23,6 +33,7 @@ public:
     void Move() override;
     void Move(Vector2 velocity, float dt, const std::vector<Rectangle>& walls);
     void Attack() override;
+    void Attack(std::vector<Enemy*>& enemies);
 
     void HandleMovement(float dt, const std::vector<Rectangle>& walls);
     void Interact();
@@ -50,4 +61,8 @@ public:
     float GetStamina() const { return stamina; }
     bool CheckIfRunning() const { return isRunning; }
     bool CheckIfClouching() const { return isClouching; }
+
+    float GetCounterRange() const { return counterRange; }
+    float GetCounterDamage() const { return counterDamage; }
+    float GetCounterStaminaCost() const { return counterStaminaCost; }
 };

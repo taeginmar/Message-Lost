@@ -28,11 +28,21 @@ public:
 
 class Inventory {
 private:
-    int capacity; int columns; int selectedIndex; int draggedIndex;
-    bool isOpen; bool isLootingMode; float pickTimer;
+    int capacity; 
+    int columns; 
+    int selectedIndex; 
+    int draggedIndex;
+    bool isOpen; 
+    bool isLootingMode; 
+    float pickTimer;
+
+    static constexpr int MAX_STACK = 3;
+
     Container* linkedContainer;
     std::vector<InventorySlot> slots;
     InventoryContextMenu contextMenu;
+    float stackLimitWarningTimer = 0.0f;
+    int stackLimitWarningSlot = -1;
 
     void HandleItemInteraction(Player& player, std::vector<Item*>& worldItems);
     void HandleSlotHover(Vector2 mousePos, float startX, float startY);

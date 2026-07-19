@@ -12,6 +12,10 @@ Inventory::Inventory(int size, int cols)
       pickTimer(0.0f), isLootingMode(false), linkedContainer(nullptr) 
 {
     slots.resize(capacity);
+    for (auto& slot : slots) {
+        slot.isLocked = true;
+    }
+
     contextMenu.show = false;
 }
 
@@ -20,27 +24,39 @@ Inventory::~Inventory() {}
 // ==========================================
 // CORE LOGIC
 // ==========================================
-bool Inventory::AddItem(Item* item) {
-    if (item == nullptr) return false;
+bool Inventory::AddItem(Item* item){
+    if (item == nullptr)
+        return false;
+
     std::string newItemType = item->GetItemType();
 
     for (int i = 0; i < capacity; i++) {
         if (slots[i].itemDetails != nullptr && !slots[i].isLocked) {
-             if (slots[i].itemDetails->GetItemType() == newItemType) {
+            if (slots[i].itemDetails->GetItemType() == newItemType) {
+                if (slots[i].count >= MAX_STACK) {
+                    TraceLog(LOG_WARNING, "STACK LIMIT");
+                    return false;
+                }
+
                 slots[i].count += item->GetStackCount();
-                item->SetActivated(false); // สำคัญมาก: ปิดการใช้งานเพื่อกันการแสดงผลซ้ำ
                 return true;
-             }
+            }
         }
     }
 
     for (int i = 0; i < capacity; i++) {
-        if (slots[i].itemDetails == nullptr && !slots[i].isLocked) {
+        if (slots[i].itemDetails == nullptr && !slots[i].isLocked){
             slots[i].itemDetails = item;
             slots[i].count = item->GetStackCount();
+
+            TraceLog(LOG_INFO, "ADD ITEM TO SLOT %d", i);
+
             return true;
         }
     }
+
+    TraceLog(LOG_WARNING, "NO FREE SLOT");
+
     return false;
 }
 
@@ -97,17 +113,21 @@ void Inventory::UnlockSlots(int count) { for (int i = 0; i < count && i < capaci
 // HANDLERS
 // ==========================================
 
-void Inventory::HandleItemInteraction(Player& player, std::vector<Item*>& worldItems) {
-    if (isOpen) return;
-    for (auto it = worldItems.begin(); it != worldItems.end(); ++it) {
+void Inventory::HandleItemInteraction(Player& player, std::vector<Item*>& worldItems)
+{
+    if (isOpen)return;
+
+    for (auto it = worldItems.begin(); it != worldItems.end(); ++it){
         Item* item = *it;
-        if (!item->IsActivated() && CheckCollisionRecs(player.GetBounds(), item->GetBounds())) {
-            if (IsKeyPressed(KEY_E)) {
-                if(AddItem(item))
-                {
-                    worldItems.erase(it);
-                    break;
-                }
+
+        if (item == nullptr) continue;
+
+        if (!item->IsActivated() && CheckCollisionRecs(player.GetBounds(), item->GetBounds())){
+            if (IsKeyPressed(KEY_E)){
+                bool added = AddItem(item);
+                if (added) worldItems.erase(it);
+
+                break;
             }
         }
     }
@@ -117,7 +137,10 @@ void Inventory::HandleSlotHover(Vector2 mousePos, float startX, float startY) {
     selectedIndex = -1;
     for (int i = 0; i < capacity; i++) {
         if (CheckCollisionPointRec(mousePos, { startX + (i % columns) * SLOT_SIZE, startY + (i / columns) * SLOT_SIZE, SLOT_SIZE, SLOT_SIZE })) {
-            selectedIndex = i; break;
+            if (!slots[i].isLocked) {
+                selectedIndex = i;
+            }
+            break;
         }
     }
 }
@@ -144,8 +167,7 @@ void Inventory::ExecuteAction(int action, int index, Player& player, std::vector
     Item* item = slots[index].itemDetails;
 
     switch (action) {
-        case 0:
-        {
+        case 0:{
             bool success = item->ApplyEffect(player);
             if (success) {
                 slots[index].count--;
@@ -155,22 +177,14 @@ void Inventory::ExecuteAction(int action, int index, Player& player, std::vector
                     slots[index].count = 0;
                 }
             }
-
             break;
         }
-
         case 1:{
             break;
         }
-
-        case 2:
-        {
+        case 2:{
             item->SetStackCount(slots[index].count);
-
-            item->SetPosition(
-                player.GetBounds().x,
-                player.GetBounds().y
-            );
+            item->SetPosition(player.GetBounds().x, player.GetBounds().y);
 
             item->SetActivated(false);
             worldItems.push_back(item);
@@ -181,12 +195,18 @@ void Inventory::ExecuteAction(int action, int index, Player& player, std::vector
             break;
         }
     }
-
     contextMenu.show = false;
 }
 
 void Inventory::Update(Player& player, std::vector<Item*>& worldItems) {
-    if (pickTimer > 0.0f) pickTimer -= GetFrameTime();
+    if (pickTimer > 0.0f){
+        pickTimer -= GetFrameTime();
+    }
+
+    if(stackLimitWarningTimer > 0.0f){
+        stackLimitWarningTimer -= GetFrameTime();
+    }
+
     HandleItemInteraction(player, worldItems);
     if (!isOpen) return;
 
@@ -209,6 +229,10 @@ void Inventory::Update(Player& player, std::vector<Item*>& worldItems) {
                     if (AddItem(containerItems[i])) {
                         linkedContainer->RemoveItem(i); 
                         break; 
+                    }
+                    else{
+                        stackLimitWarningSlot = i;
+                        stackLimitWarningTimer = 0.8f;
                     }
                 }
             }
@@ -248,8 +272,14 @@ void Inventory::Draw(const Player& player) {
     data.containerSlots.clear(); // เคลียร์ container เก่าด้วย
     if (isLootingMode && linkedContainer != nullptr) {
         auto& items = linkedContainer->GetItems();
-        for(auto item : items) {
-            data.containerSlots.push_back({ false, (void*)item, 1, false });
+        for (int i = 0; i < (int)items.size(); i++) {
+            bool flash = false;
+
+            if (i == stackLimitWarningSlot && stackLimitWarningTimer > 0.0f){
+                flash = true;
+            }
+
+            data.containerSlots.push_back({flash, (void*)items[i],1,false});
         }
         while(data.containerSlots.size() < (size_t)capacity) {
             data.containerSlots.push_back({ false, nullptr, 0, false });

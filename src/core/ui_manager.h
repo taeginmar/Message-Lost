@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include <vector>
 #include <string>
+#include <cmath>
 
 #include "gameplay/item/item.h"
 
@@ -46,7 +47,6 @@ class Player;
 class UIManager {
 public:
     static void DrawInventoryUI(const InventoryUIData& data, const Player& player);
-
     static void DrawSlotGrid(
         const std::vector<UIRenderSlot>& slots,
         int capacity,
@@ -64,12 +64,5 @@ private:
     static void DrawInventorySection(const InventoryUIData& data, float x, float y);
     static void DrawContainerSection(const InventoryUIData& data, float x, float y);
 
-    static void DrawStatBar(
-        const char* label,
-        float value,
-        float maxValue,
-        float x,
-        float y,
-        Color fillColor
-    );
+    static void DrawStatBar(const char* label, float value, float maxValue, float x, float y, Color fillColor );
 };

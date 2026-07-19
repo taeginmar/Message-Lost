@@ -9,7 +9,7 @@ int main(){
     InitWindow(800, 600, "Mock Up Game Test");
     SetTargetFPS(60);
 
-   Player player(400, 300, 40, 40, 100.0f, 200.0f, 100.0f);
+   Player player(400, 300, 40, 40, 100.0f, 100.0f, 120.0f);
    Level level;
 
    SetUpMockUpLevel(level, player); //Chapter 0 : Mock Up Level

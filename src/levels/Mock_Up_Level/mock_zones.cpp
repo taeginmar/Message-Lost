@@ -16,6 +16,9 @@ Zone* CreateZoneA(Player& player) {
     
     zone->AddItems(new Medkit(200.0f, 200.0f, player));
     zone->AddItems(new EnergyDrink(300.f, 200.0f, player));
+    zone->AddItems(new KeyCard(350.0f, 200.0f, player));
+    zone->AddItems(new Battery(400.0f, 200.0f, player));
+    zone->AddItems(new AmmoBox(450.0f, 200.0f, player));
 
     return zone;
 }
@@ -27,13 +30,17 @@ Zone* CreateZoneB(Player& player) {
     
     zone->AddEnemy(new Enemy(400, 300, 40, 40, 100, 100, 200, &player, 
                              Enemy::NormalAction::IDLE, Enemy::PatrolType::HORIZONTAL, 
-                             1, 150.0f, 10.0f));
+                             1, 150.0f, 40.0f));
     
     Container* containerB = new Container({500, 400, 50, 50});
 
     containerB->AddItem(new Medkit(0.0f, 0.0f, player));
     containerB->AddItem(new Medkit(0.0f, 0.0f, player));
     containerB->AddItem(new Medkit(0.0f, 0.0f, player));
+
+    zone->AddItems(new KeyCard(500.0f, 200.0f, player));
+    zone->AddItems(new Battery(550.0f, 200.0f, player));
+    zone->AddItems(new AmmoBox(600.0f, 200.0f, player));
 
     zone->AddContainer(containerB);
     

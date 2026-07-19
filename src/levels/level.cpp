@@ -46,77 +46,82 @@ void Level::AddDoor(Door door) {
 }
 
 void Level::Update(Player& player, float dt){
-    if(IsKeyPressed(KEY_TAB) && player.GetInventory()) {
+    if (IsKeyPressed(KEY_TAB) && player.GetInventory()) {
         player.GetInventory()->Toggle();
     }
 
-    for(auto& door : doors) {
+    for (auto& door : doors) {
         if (door.sourceZoneIndex == currentZoneIndex) {
-            if(CheckCollisionRecs(player.GetBounds(), door.bounds)) {
-                if(IsKeyPressed(KEY_E)) {
-                    if(door.targetZoneIndex != currentZoneIndex) {
+            if (CheckCollisionRecs(player.GetBounds(), door.bounds)) {
+                if (IsKeyPressed(KEY_E)) {
+
+                    if (door.targetZoneIndex != currentZoneIndex) {
                         int oldZoneIndex = currentZoneIndex;
                         currentZoneIndex = door.targetZoneIndex;
-                        
-                        // แก้ไขปัญหาที่ 2: ระบบค้นหาประตูปลายทางอัตโนมัติเพื่อกำหนดจุดเกิดใกล้ประตู
                         bool foundDestDoor = false;
-                        for(const auto& destDoor : doors) {
-                            if(destDoor.sourceZoneIndex == currentZoneIndex && destDoor.targetZoneIndex == oldZoneIndex) {
+
+                        for (const auto& destDoor : doors) {
+                            if (destDoor.sourceZoneIndex == currentZoneIndex &&
+                                destDoor.targetZoneIndex == oldZoneIndex) {
+
                                 float spawnX = destDoor.bounds.x;
                                 float spawnY = destDoor.bounds.y;
-                                
-                                // คำนวณตำแหน่งเกิดให้อยู่ใกล้ประตูฉากใหม่โดยไม่ทับฮิตบ็อกซ์ประตู
-                                if(spawnX < 100) {
-                                    spawnX += destDoor.bounds.width + 20; // ประตูอยู่ซ้าย เกิดเยื้องขวา
-                                } else if(spawnX > 700) {
-                                    spawnX -= (player.GetBounds().width + 20); // ประตูอยู่ขวา เกิดเยื้องซ้าย
-                                } else if(spawnY < 100) {
-                                    spawnY += destDoor.bounds.height + 20; // ประตูอยู่บน เกิดเยื้องล่าง
-                                } else {
-                                    spawnY -= (player.GetBounds().height + 20); // ประตูอยู่ล่าง เกิดเยื้องบน
+
+                                if (spawnX < 100) {
+                                    spawnX += destDoor.bounds.width + 20;
                                 }
-                                
+                                else if (spawnX > 700) {
+                                    spawnX -= (player.GetBounds().width + 20);
+                                }
+                                else if (spawnY < 100) {
+                                    spawnY += destDoor.bounds.height + 20;
+                                }
+                                else {
+                                    spawnY -= (player.GetBounds().height + 20);
+                                }
+
                                 player.SetPosition(spawnX, spawnY);
                                 foundDestDoor = true;
                                 break;
                             }
                         }
-                        
-                        // หากไม่เจอประตูคู่ขนาน ให้ใช้ค่า exitPoint ตามที่ตั้งไว้เดิมเป็น Fallback
-                        if(!foundDestDoor) {
-                            player.SetPosition(door.exitPoint.x, door.exitPoint.y);
+
+                        if (!foundDestDoor) {
+                            player.SetPosition(
+                                door.exitPoint.x,
+                                door.exitPoint.y
+                            );
                         }
-                    } 
-                    else {
-                        // ประตูประเภทกดแล้วรีเซ็ตตำแหน่งในฉากตัวเอง ให้ใช้ exitPoint เดิม
-                        player.SetPosition(door.exitPoint.x, door.exitPoint.y);
                     }
-                    return; 
+                    else {
+                        player.SetPosition(
+                            door.exitPoint.x,
+                            door.exitPoint.y
+                        );
+                    }
+
+                    return;
                 }
             }
         }
     }
 
-    if(currentZoneIndex < (int)zones.size()) {
+    if (currentZoneIndex < (int)zones.size()) {
         zones[currentZoneIndex]->Update(player, dt);
 
-        if(player.GetInventory()) {
-            player.GetInventory()->Update(player, zones[currentZoneIndex]->items);
+        player.Attack(zones[currentZoneIndex]->enemies);
+
+        if (player.GetInventory()) {
+            player.GetInventory()->Update(
+                player,
+                zones[currentZoneIndex]->items
+            );
         }
 
-        auto& currentItems = zones[currentZoneIndex]->items;
-        for(size_t i = 0; i < currentItems.size(); i++) {
-            if(CheckCollisionRecs(player.GetBounds(), currentItems[i]->GetBounds())) {
-                if(IsKeyPressed(KEY_E)) {
-                    player.GetInventory()->AddItem(currentItems[i]);
-                    currentItems.erase(currentItems.begin() + i);
-                    i--;
-                }
-            }
-        }
-
-        for(auto* c : zones[currentZoneIndex]->containers) {
-            if(c->IsPlayerNear(player.GetBounds()) && IsKeyPressed(KEY_E)) {
+        for (auto* c : zones[currentZoneIndex]->containers) {
+            if (c->IsPlayerNear(player.GetBounds()) &&
+                IsKeyPressed(KEY_E))
+            {
                 player.GetInventory()->OpenContainer(c);
             }
         }
