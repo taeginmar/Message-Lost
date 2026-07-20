@@ -1,5 +1,4 @@
 #include "ui_manager.h"
-#include "gameplay/entity/player.h"
 
 const float SLOT_SIZE = 50.0f;
 
@@ -150,9 +149,19 @@ void UIManager::DrawInventoryUI(const InventoryUIData& data, const Player& playe
     DrawText("OBJECTIVE", leftPageX + 10, objectiveY + 10, 12, WHITE);
     DrawLine(leftPageX + 10, objectiveY + 35, leftPageX + 290, objectiveY + 35, LIGHTGRAY);
 
-    DrawText("- Find a way out", leftPageX + 15, objectiveY + 50, 11, LIGHTGRAY);
-    DrawText("- Search useful items", leftPageX + 15, objectiveY + 75, 11, LIGHTGRAY);
-    DrawText("- Avoid hostile enemies", leftPageX + 15, objectiveY + 100, 11, LIGHTGRAY);
+    float currentTextY = objectiveY + 50.0f;
+
+    for (size_t i = 0; i < data.activeObjectives.size(); i++) {
+        std::string titleText = "- " + data.activeObjectives[i].title; 
+        DrawText(titleText.c_str(), leftPageX + 15, currentTextY, 13, WHITE);
+        
+        currentTextY += 18.0f;
+
+        std::string descText = "  " + data.activeObjectives[i].description; 
+        DrawText(descText.c_str(), leftPageX + 15, currentTextY, 10, LIGHTGRAY);
+
+        currentTextY += 25.0f;
+    }
 
     // -----------------------------------------------------
     // KEY BINDINGS

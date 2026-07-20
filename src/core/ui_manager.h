@@ -6,6 +6,8 @@
 #include <cmath>
 
 #include "gameplay/item/item.h"
+#include "gameplay/entity/player.h"
+#include "objective_manager.h"
 
 struct ContainerDisplaySlot {
     void* sampleItem;
@@ -18,6 +20,11 @@ struct UIRenderSlot {
     void* itemPtr;
     int count;
     bool isDragged;
+};
+
+struct ObjectiveUIData {
+    std::string title;
+    std::string description;
 };
 
 struct InventoryUIData {
@@ -36,7 +43,7 @@ struct InventoryUIData {
     float stamina;
     float maxStamina;
 
-    std::string objective;
+     std::vector<ObjectiveUIData> activeObjectives; 
 
     std::vector<UIRenderSlot> slots;
     std::vector<UIRenderSlot> containerSlots;

@@ -7,6 +7,8 @@
 #include "gameplay/item/container.h"
 #include "gameplay/item/item.h"
 #include "gameplay/inventory/inventory.h"
+#include "core/objective_manager.h"
+#include "core/game_state.h"
 
 class Door{
 public:
@@ -29,12 +31,15 @@ public:
     std::vector<Item*> items;
     std::vector<Enemy*> enemies;
 
+    std::vector<Interactable*> interactables;
+
     Zone(std::string name) : ZoneName(name) {}
     ~Zone();
 
     void AddContainer(Container* container);
     void AddItems(Item* item);
     void AddEnemy(Enemy* enemy);
+    void AddInteractable(Interactable* object);
 
     void Update(Player& player, float dt);
 
@@ -47,6 +52,8 @@ private:
     std::vector<Door> doors;
     int currentZoneIndex = 0;
 
+    ObjectiveManager objectiveManager;
+
 public:
     Level() = default;
     ~Level();
@@ -54,6 +61,8 @@ public:
     void AddZone(Zone* zone);
     void AddDoor(Door door);
 
-    void Update(Player& player, float dt);
+    ObjectiveManager& GetObjectiveManager(){return objectiveManager;}
+
+    void Update(Player& player, float dt, GameState& gameState);
     void Draw();
 };

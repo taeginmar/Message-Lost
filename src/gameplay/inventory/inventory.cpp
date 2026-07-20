@@ -264,6 +264,15 @@ void Inventory::Draw(const Player& player) {
     data.maxHp = 100.0f; // ใช้ค่าคงที่ 100 หากไม่มี GetMaxHealth()
     data.stamina = player.GetStamina();
 
+    //Objective Filtering
+    data.activeObjectives.clear();
+    const auto& objectives = gObjectiveManager.GetObjectives();
+    for (const auto& obj : objectives) {
+        if (obj->IsUnlocked() && !obj->IsCompleted()) {
+            data.activeObjectives.push_back({obj->GetTitle(), obj->GetDescription()});
+        }
+    }
+
     data.slots.clear(); 
     for(int i = 0; i < capacity; i++) {
         data.slots.push_back({ slots[i].isLocked, (void*)slots[i].itemDetails, slots[i].count, (i == draggedIndex) });
@@ -289,6 +298,37 @@ void Inventory::Draw(const Player& player) {
     UIManager::DrawInventoryUI(data, player);
     
     if (contextMenu.show) contextMenu.Draw();
+}
+
+int Inventory::GetItemCount(const std::string& targetItemType) const {
+    int totalCount = 0;
+    for (int i = 0; i < capacity; i++) {
+        if (!slots[i].isLocked && slots[i].itemDetails != nullptr) {
+            Item* item = static_cast<Item*>(slots[i].itemDetails);
+            if (item->GetItemType() == targetItemType) {
+                totalCount += slots[i].count;
+            }
+        }
+    }
+    return totalCount;
+}
+
+void Inventory::Clear(){
+    for(auto& slot : slots){
+        slot.itemDetails = nullptr;
+        slot.count = 0;
+    }
+
+    selectedIndex = 0;
+    draggedIndex = -1;
+
+    isOpen = false;
+    isLootingMode = false;
+
+    linkedContainer = nullptr;
+
+    stackLimitWarningTimer = 0.0f;
+    stackLimitWarningSlot = -1;
 }
 
 void InventoryContextMenu::Update(Vector2 mousePos) { for (int i = 0; i < 3; i++) if (CheckCollisionPointRec(mousePos, { pos.x, pos.y + (i * 28), 100, 28 })) selectedOpt = i; }

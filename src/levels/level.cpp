@@ -4,6 +4,12 @@ Zone::~Zone(){
     for(auto container : containers) delete container;
     for(auto item: items) delete item;
     for(auto enemy : enemies) delete enemy;
+    for(auto object : interactables) delete object;
+
+    containers.clear();
+    items.clear();
+    enemies.clear();
+    interactables.clear();
 }
 
 void Zone::AddContainer(Container* container){
@@ -18,9 +24,29 @@ void Zone::AddEnemy(Enemy* enemy){
     enemies.push_back(enemy);
 }
 
+void Zone::AddInteractable(Interactable* object){
+    if(object == nullptr) return;
+    
+    interactables.push_back(object);
+}
+
 void Zone::Update(Player& player, float dt){
+    if(player.IsDead()) return;
     player.HandleMovement(dt, walls);
     for(auto* enemy : enemies) enemy->Update(dt, walls);
+
+    Rectangle playerBounds = player.GetBounds();
+
+    for(auto* object : interactables){
+        if(object == nullptr) continue;
+
+        if(CheckCollisionRecs(playerBounds,object->GetBounds())){
+            if(IsKeyPressed(KEY_E)){
+                 object->OnInteract();
+            }
+        }
+    }
+
 }
 
 void Zone::Draw(){
@@ -28,6 +54,7 @@ void Zone::Draw(){
     for (auto item : items) item->Draw();
     for (auto* enemy : enemies) enemy->Draw();
 
+    for(auto* object : interactables) object->Draw();
     for(auto* container : containers) container->Draw();
 }
 
@@ -45,10 +72,14 @@ void Level::AddDoor(Door door) {
     doors.push_back(door);
 }
 
-void Level::Update(Player& player, float dt){
-    if (IsKeyPressed(KEY_TAB) && player.GetInventory()) {
+void Level::Update(Player& player, float dt, GameState& gameState){
+    if(!gameState.CanUpdateWorld()) return;
+    
+    if (gameState.CanOpenInventory() && IsKeyPressed(KEY_TAB) && player.GetInventory()) {
         player.GetInventory()->Toggle();
     }
+
+    // ลบบรรทัด ตรวจสอบเงื่อนไข CanUpdateWorld ซ้ำซ้อนออกไปเพื่อให้ลูปทำงานต่อได้ทันที
 
     for (auto& door : doors) {
         if (door.sourceZoneIndex == currentZoneIndex) {
@@ -106,24 +137,26 @@ void Level::Update(Player& player, float dt){
         }
     }
 
-    if (currentZoneIndex < (int)zones.size()) {
-        zones[currentZoneIndex]->Update(player, dt);
+    if(currentZoneIndex >= (int)zones.size()) { return; }
 
-        player.Attack(zones[currentZoneIndex]->enemies);
+    Zone* currentZone = zones[currentZoneIndex];
+    currentZone->Update(player, dt);
+    player.Attack(currentZone->enemies);
 
-        if (player.GetInventory()) {
-            player.GetInventory()->Update(
-                player,
-                zones[currentZoneIndex]->items
-            );
-        }
+    if(player.GetInventory()){
+        player.GetInventory()->Update(player,currentZone->items);
 
-        for (auto* c : zones[currentZoneIndex]->containers) {
-            if (c->IsPlayerNear(player.GetBounds()) &&
-                IsKeyPressed(KEY_E))
-            {
-                player.GetInventory()->OpenContainer(c);
+        int currentMedKitCount = player.GetInventory()->GetItemCount("MedKit");
+        for (auto* obj : gObjectiveManager.GetObjectives()) {
+            if (obj->GetType() == ObjectiveType::COLLECT_ITEM && obj->GetTargetId() == "MedKit") {
+                obj->SetCurrentProgress(currentMedKitCount);
             }
+        }
+    }
+
+    for(auto* c : currentZone->containers){
+        if(c->IsPlayerNear(player.GetBounds()) && IsKeyPressed(KEY_E)){
+            player.GetInventory()->OpenContainer(c);
         }
     }
 }

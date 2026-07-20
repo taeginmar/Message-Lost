@@ -48,6 +48,9 @@ Enemy:: Enemy(float x, float y, float width, float height,
     this->moveDirection = initialDirection;
     this->patrolRange = customPatrolRange;
     this->damage = customDamage;
+
+    this->health = health;
+    this->isAlive = true;
 }
 
 Enemy::~Enemy() {}

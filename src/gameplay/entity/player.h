@@ -19,6 +19,10 @@ private:
     float counterDamage;
     float counterStaminaCost;
 
+    bool isDead = false;
+    float maxHealth;
+    Vector2 spawnPoint;
+
 public:
     Player(float x, float y, float width, float height, float health, float speed, float stamina);
     virtual ~Player();
@@ -35,11 +39,16 @@ public:
     void Attack() override;
     void Attack(std::vector<Enemy*>& enemies);
 
+    bool IsDead() const { return isDead; }
+    void Die();
+    void Respawn();
+
     void HandleMovement(float dt, const std::vector<Rectangle>& walls);
     void Interact();
 
-    void SetHealth(float h) { this->health = h; }
+    void SetHealth(float h);
     void SetStamina(float s) { this->stamina = s; }
+    void SetSpawnPoint(float x, float y) { spawnPoint = { x, y }; }
 
     void Heal(float amount) {
         health += amount;
@@ -55,6 +64,7 @@ public:
     }
 
     Inventory* GetInventory() const { return inventory; }
+    void ClearInventory();
 
     //Getters
     float GetCurrentSpeed() const { return currentSpeed; }

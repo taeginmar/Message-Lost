@@ -6,7 +6,9 @@
 #include "gameplay/entity/player.h"
 #include "gameplay/item/container.h"
 #include "gameplay/item/item.h"
+#include "core/objective_manager.h"
 
+extern ObjectiveManager gObjectiveManager;
 class Item; class Container; class Player;
 
 struct InventorySlot {
@@ -63,4 +65,7 @@ public:
     void Draw(const Player& player);
     void UnlockSlot(int index);
     void UnlockSlots(int count);
+    void Clear();
+
+    int GetItemCount(const std::string& targetItemType) const;
 };
