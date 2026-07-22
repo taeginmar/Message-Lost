@@ -14,6 +14,8 @@ enum class EnemyState{
 };
 
 class Enemy : public Entity{
+protected:
+    virtual void OnDeath() {}
 public:
     enum class NormalAction {IDLE, PATROL};
     enum class PatrolType {HORIZONTAL, VERTICAL};
@@ -77,4 +79,6 @@ private:
     bool isStunned = false;
     float stunTimer = 0.0f;
     float knockbackForce = 40.0f;
+
+    bool deathHandled = false;
 };

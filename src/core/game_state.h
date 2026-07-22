@@ -7,7 +7,8 @@ enum class GameStateType {
     PAUSE,
     DIALOGUE,
     CUTSCENE,
-    GAME_OVER
+    GAME_OVER,
+    MOCK_COMPLETE
 };
 
 class GameState

@@ -58,6 +58,17 @@ int main() {
             DrawText("Press ENTER to Restart", 140, 320, 40, WHITE);
         }
 
+        if(gameState.GetState()==GameStateType::MOCK_COMPLETE){
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),Fade(BLACK,0.8f));
+
+            DrawText("MOCK FLOW COMPLETED",130,220,45,GREEN);
+            DrawText("Press ENTER to Close",170,300,30,WHITE);
+
+            if(IsKeyPressed(KEY_ENTER)){
+                CloseWindow();
+            }
+        }
+
         EndDrawing();
     }
 

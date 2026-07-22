@@ -138,13 +138,20 @@ void Level::Update(Player& player, float dt, GameState& gameState){
 
     Zone* currentZone = zones[currentZoneIndex];
     currentZone->Update(player, dt);
+
+    if(gObjectiveManager.GetCurrentObjective()==nullptr){
+        gameState.SetState(GameStateType::MOCK_COMPLETE);
+        return;
+    }
+    
     player.Attack(currentZone->enemies);
 
     if(player.GetInventory()){
         player.GetInventory()->Update(player,currentZone->items);
 
         int currentMedKitCount = player.GetInventory()->GetItemCount("MedKit");
-        gObjectiveManager.UpdateProgress(ObjectiveType::COLLECT_ITEM, "medkit", currentMedKitCount);
+
+        gObjectiveManager.UpdateProgress( ObjectiveType::COLLECT_ITEM,"medkit", currentMedKitCount);
     }
 
     for(auto* c : currentZone->containers){
