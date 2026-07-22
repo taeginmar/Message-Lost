@@ -5,7 +5,7 @@ Player::Player(float x, float y, float width, float height, float health, float 
     :Entity(x, y, width, height, health, speed), stamina(stamina), isRunning(false), isClouching(false) {
     counterRange = 80.0f;
     counterDamage = 25.0f;
-    counterStaminaCost = 70.0f;
+    counterStaminaCost = 50.0f;
 
     inventory = new Inventory(16, 4);
     inventory->UnlockSlots(5);

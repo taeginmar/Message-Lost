@@ -4,6 +4,8 @@
 #include "gameplay/entity/player.h"
 #include "core/game_state.h"
 
+Player* gPlayer = nullptr;
+
 void SetUpMockUpLevel(Level& level, Player& player);
 
 int main() {
@@ -12,6 +14,7 @@ int main() {
 
     Player player(400, 300, 40, 40, 100.0f, 100.0f, 120.0f);
     player.SetSpawnPoint(400.0f, 300.0f);
+    gPlayer = &player;
 
     Level* level = new Level();
     GameState gameState;

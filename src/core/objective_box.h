@@ -1,20 +1,15 @@
 #pragma once
-#include <string>
+#include "core/objective_manager.h"
+#include "raylib.h"
 
-#include "gameplay/interactable/interactable.h"
-#include "objective_manager.h"
-
-class ObjectiveBox : public Interactable {
-private:
-  std::string objectiveID;
-  ObjectiveManager *objectiveManager;
-
+class ObjectiveBox {
 public:
-  ObjectiveBox(float x, float y, float width, float height,
-               const std::string &id, ObjectiveManager *manager);
+    ObjectiveBox(float x = 0.0f, float y = 0.0f, float width = 300.0f, float height = 100.0f);
 
-  ~ObjectiveBox();
+    void SetPosition(float x, float y);
+    void Update();
+    void Draw();
 
-  void OnInteract() override;
-  void Draw() override;
+private:
+    Rectangle bounds;
 };

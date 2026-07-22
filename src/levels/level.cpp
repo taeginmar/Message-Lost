@@ -46,7 +46,6 @@ void Zone::Update(Player& player, float dt){
             }
         }
     }
-
 }
 
 void Zone::Draw(){
@@ -78,8 +77,6 @@ void Level::Update(Player& player, float dt, GameState& gameState){
     if (gameState.CanOpenInventory() && IsKeyPressed(KEY_TAB) && player.GetInventory()) {
         player.GetInventory()->Toggle();
     }
-
-    // ลบบรรทัด ตรวจสอบเงื่อนไข CanUpdateWorld ซ้ำซ้อนออกไปเพื่อให้ลูปทำงานต่อได้ทันที
 
     for (auto& door : doors) {
         if (door.sourceZoneIndex == currentZoneIndex) {
@@ -147,11 +144,7 @@ void Level::Update(Player& player, float dt, GameState& gameState){
         player.GetInventory()->Update(player,currentZone->items);
 
         int currentMedKitCount = player.GetInventory()->GetItemCount("MedKit");
-        for (auto* obj : gObjectiveManager.GetObjectives()) {
-            if (obj->GetType() == ObjectiveType::COLLECT_ITEM && obj->GetTargetId() == "MedKit") {
-                obj->SetCurrentProgress(currentMedKitCount);
-            }
-        }
+        gObjectiveManager.UpdateProgress(ObjectiveType::COLLECT_ITEM, "medkit", currentMedKitCount);
     }
 
     for(auto* c : currentZone->containers){

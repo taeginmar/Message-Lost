@@ -1,37 +1,26 @@
-#include "objective_box.h"
-#include "objective_event.h"
-ObjectiveBox::ObjectiveBox(
-    float x,
-    float y,
-    float width,
-    float height,
-    const std::string& id,
-    ObjectiveManager* manager
-): Interactable(x,y,width,height,"Press E to interact"){
-    objectiveID = id;
-    objectiveManager = manager;
+#include "core/objective_box.h"
+
+ObjectiveBox::ObjectiveBox(float x, float y, float width, float height)
+    : bounds{x, y, width, height} {}
+
+void ObjectiveBox::SetPosition(float x, float y) {
+    bounds.x = x;
+    bounds.y = y;
 }
 
-ObjectiveBox::~ObjectiveBox(){}
-
-void ObjectiveBox::OnInteract(){
-    if(isActivated)return;
-
-    isActivated = true;
-
-    if(objectiveManager == nullptr)return;
-    
-    objectiveManager->ReportEvent(ObjectiveType::INTERACT, objectiveID);
-    prompt = "Completed";
+void ObjectiveBox::Update() {
 }
 
-void ObjectiveBox::Draw(){
-    Color boxColor = BLUE;
+void ObjectiveBox::Draw() {
+    Objective* currentObj = gObjectiveManager.GetCurrentObjective();
 
-    if(isActivated){
-        boxColor = GRAY;
+    DrawRectangleRec(bounds, Fade(BLACK, 0.7f));
+    DrawRectangleLinesEx(bounds, 2.0f, GOLD);
+
+    if (currentObj != nullptr) {
+        DrawText(currentObj->GetTitle().c_str(), (int)bounds.x + 15, (int)bounds.y + 15, 18, YELLOW);
+        DrawText(currentObj->GetDescription().c_str(), (int)bounds.x + 15, (int)bounds.y + 42, 14, RAYWHITE);
+    } else {
+        DrawText("No Active Objective", (int)bounds.x + 15, (int)bounds.y + 15, 18, GRAY);
     }
-
-    DrawRectangleRec(bounds,boxColor);
-    DrawText("OBJ",bounds.x + 10,bounds.y + 10,10,WHITE);
 }

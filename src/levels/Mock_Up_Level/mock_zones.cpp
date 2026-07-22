@@ -1,18 +1,97 @@
 #include "levels/Mock_Up_Level/mock_zones.h"
 
-void GeneratorBox::OnInteract(){
+static Objective* gObjMeetHelmuth = nullptr;
+static Objective* gObjGatherItems = nullptr;
+static Objective* gObjKillEnemies = nullptr;
+static Objective* gObjExitBuilding = nullptr;
+
+extern Player* gPlayer;
+static Zone* gZoneA = nullptr;
+static bool gEnemiesSpawned = false;
+
+void UpdateMockUpLevel(float dt) {
+    if (gObjKillEnemies && gObjKillEnemies->IsUnlocked() && !gEnemiesSpawned) {
+        if (gZoneA != nullptr && gPlayer != nullptr) {
+            gZoneA->AddEnemy(new EnemyNeutralize(400.0f, 300.0f, gPlayer));
+            gZoneA->AddEnemy(new EnemyNeutralize(550.0f, 300.0f, gPlayer));
+            gEnemiesSpawned = true;
+        }
+    }
+}
+
+// Objective 1
+GeneratorBox::GeneratorBox(float x, float y)
+    : Interactable(x, y, 40.0f, 40.0f, "Press E to Activate Generator"), isActivated(false) {}
+
+void GeneratorBox::OnInteract() {
     if (!isActivated) {
         isActivated = true;
         gObjectiveManager.ReportEvent(ObjectiveType::INTERACT, "generator_box");
     }
 }
 
-void GeneratorBox::Draw(){
-        Color boxColor = isActivated ? GREEN : RED;
-        DrawRectangleRec(bounds, boxColor);
-        DrawText("GEN", bounds.x + 5, bounds.y + 15, 12, WHITE);
+void GeneratorBox::Draw() {
+    Color boxColor = isActivated ? GREEN : RED;
+    DrawRectangleRec(bounds, boxColor);
+    DrawText("GEN", bounds.x + 5, bounds.y + 15, 12, WHITE);
+}
+
+// Objective 2
+MeetHelmuth::MeetHelmuth(float x, float y, Player& player, Zone* zoneA)
+    : Interactable(x, y, 40.0f, 40.0f, "Press E to Talk with Helmuth"), isTalked(false), targetPlayer(player), targetZoneA(zoneA) {}
+
+void MeetHelmuth::OnInteract() {
+    if (!isTalked) {
+        isTalked = true;
+        gObjectiveManager.ReportEvent(ObjectiveType::DIALOGUE_COMPLETE, "helmuth_box");
+    }
+}
+
+void MeetHelmuth::Draw() {
+    Color npcColor = isTalked ? BLUE : YELLOW;
+    DrawRectangleRec(bounds, npcColor);
+    DrawText("NPC", bounds.x + 5, bounds.y + 15, 12, BLACK);
+}
+
+// Objective 4
+EnemyNeutralize::EnemyNeutralize(float x, float y, Player* player)
+    : Enemy(x, y, 40.0f, 40.0f, 100.0f, 100.0f, 200.0f, player,
+            Enemy::NormalAction::IDLE, Enemy::PatrolType::HORIZONTAL,
+            1, 150.0f, 40.0f), eventReported(false) {}
+
+void EnemyNeutralize::Update(float dt) {
+    if (IsDead()) {
+        if (!eventReported && gObjKillEnemies && gObjKillEnemies->IsUnlocked()) {
+            eventReported = true;
+            gObjectiveManager.ReportEvent(ObjectiveType::KILL, "enemy_guard");
+        }
+        return;
     }
 
+    Enemy::Update(dt);
+}
+
+void EnemyNeutralize::Draw() {
+    if (!IsDead()) {
+        DrawRectangleRec(bounds, RED);
+        DrawText("ENM", (int)bounds.x + 5, (int)bounds.y + 15, 12, WHITE);
+    }
+}
+
+// Objective 5
+FindExit::FindExit(float x, float y)
+    : Interactable(x, y, 50.0f, 50.0f, "Press E to Exit Building") {}
+
+void FindExit::OnInteract() {
+    gObjectiveManager.ReportEvent(ObjectiveType::REACH_AREA, "exit_box");
+}
+
+void FindExit::Draw() {
+    DrawRectangleRec(bounds, DARKPURPLE);
+    DrawText("EXIT", bounds.x + 10, bounds.y + 18, 10, WHITE);
+}
+
+// Set Up Level Zone
 Zone* CreateZoneA(Player& player) {
     Zone* zone = new Zone("Warehouse A");
     
@@ -20,7 +99,6 @@ Zone* CreateZoneA(Player& player) {
     zone->walls.push_back({0, 0, 20, 600});
 
     Container* containerA = new Container({100, 100, 50, 50});
-    
     containerA->AddItem(new Medkit(0.0f, 0.0f, player));
     containerA->AddItem(new EnergyDrink(0.0f, 0.0f, player));
     containerA->AddItem(new EnergyDrink(0.0f, 0.0f, player));
@@ -37,17 +115,12 @@ Zone* CreateZoneA(Player& player) {
     return zone;
 }
 
-Zone* CreateZoneB(Player& player) {
+Zone* CreateZoneB(Player& player, Zone* zoneA) {
     Zone* zone = new Zone("Security Room B");
     
     zone->walls.push_back({300, 200, 400, 20});
     
-    zone->AddEnemy(new Enemy(400, 300, 40, 40, 100, 100, 200, &player, 
-                             Enemy::NormalAction::IDLE, Enemy::PatrolType::HORIZONTAL, 
-                             1, 150.0f, 40.0f));
-    
     Container* containerB = new Container({500, 400, 50, 50});
-
     containerB->AddItem(new Medkit(0.0f, 0.0f, player));
     containerB->AddItem(new Medkit(0.0f, 0.0f, player));
     containerB->AddItem(new Medkit(0.0f, 0.0f, player));
@@ -57,13 +130,22 @@ Zone* CreateZoneB(Player& player) {
     zone->AddItems(new AmmoBox(600.0f, 200.0f, player));
 
     zone->AddContainer(containerB);
+
+    zone->AddInteractable(new MeetHelmuth(350.0f, 120.0f, player, zoneA));
+    zone->AddInteractable(new FindExit(700.0f, 450.0f));
     
     return zone;
 }
 
+// Set Up Level Flow
 void SetUpMockUpLevel(Level& level, Player& player) {
+    gPlayer = &player;
+    gEnemiesSpawned = false;
+
     Zone* zoneA = CreateZoneA(player);
-    Zone* zoneB = CreateZoneB(player);
+    Zone* zoneB = CreateZoneB(player, zoneA);
+
+    gZoneA = zoneA;
 
     level.AddZone(zoneA);
     level.AddZone(zoneB);
@@ -74,14 +156,14 @@ void SetUpMockUpLevel(Level& level, Player& player) {
     gObjectiveManager.Clear();
 
     Objective* activateGenerator = new Objective("Activate Generator", "Restore generator power", ObjectiveType::INTERACT, "generator_box");
-    Objective* meetHelmuth = new Objective( "Meet Helmuth", "Talk with Helmuth", ObjectiveType::INTERACT, "helmuth_box");
-    Objective* gatherItems = new Objective("Gather Required Items", "Collect 3 MedKits", ObjectiveType::COLLECT_ITEM, "MedKit", 3);
-    Objective* exitBuilding = new Objective("Exit from the Building", "Leave the facility", ObjectiveType::INTERACT, "exit_box");
-
-    activateGenerator->Unlock();
+    gObjMeetHelmuth = new Objective("Meet Helmuth", "Talk with Helmuth", ObjectiveType::DIALOGUE_COMPLETE, "helmuth_box");
+    gObjGatherItems = new Objective("Gather Required Items", "Collect 3 MedKits", ObjectiveType::COLLECT_ITEM, "medkit", 3);
+    gObjKillEnemies = new Objective("Clear the Corridor", "Eliminate Enemies", ObjectiveType::KILL, "enemy_guard", 2);
+    gObjExitBuilding = new Objective("Exit from the Building", "Leave the facility", ObjectiveType::REACH_AREA, "exit_box");
 
     gObjectiveManager.AddObjective(activateGenerator);
-    gObjectiveManager.AddObjective(meetHelmuth);
-    gObjectiveManager.AddObjective(gatherItems);
-    gObjectiveManager.AddObjective(exitBuilding);
+    gObjectiveManager.AddObjective(gObjMeetHelmuth);
+    gObjectiveManager.AddObjective(gObjGatherItems);
+    gObjectiveManager.AddObjective(gObjKillEnemies);
+    gObjectiveManager.AddObjective(gObjExitBuilding);
 }

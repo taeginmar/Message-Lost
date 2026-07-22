@@ -3,37 +3,34 @@
 
 enum class ObjectiveType {
     INTERACT,
+    DIALOGUE_COMPLETE,
     COLLECT_ITEM,
-    REACH_AREA,
-    DIALOGUE_COMPLETE
+    KILL,
+    REACH_AREA
 };
 
 class Objective {
+public:
+    Objective(const std::string& title, const std::string& description, ObjectiveType type, const std::string& targetId = "", int requiredAmount = 1);
+
+    void Unlock();
+    bool IsUnlocked() const;
+    bool IsCompleted() const;
+    void ProcessEvent(ObjectiveType eventType, const std::string& eventId, int amount = 1);
+    void SetCurrentProgress(int progress);
+
+    std::string GetTitle() const;
+    std::string GetDescription() const;
+    ObjectiveType GetType() const;
+    std::string GetTargetId() const;
+
 private:
     std::string title;
     std::string description;
     ObjectiveType type;
     std::string targetId;
-    int currentProgress;
-    int requiredProgress;
-    bool completed;
+    int requiredAmount;
+    int currentAmount;
     bool unlocked;
-
-public:
-    Objective(const std::string& title, const std::string& description, ObjectiveType type, const std::string& targetId, int requiredProgress = 1);
-    virtual ~Objective();
-
-    virtual void ProcessEvent(ObjectiveType eventType, const std::string& eventId);
-
-    bool IsCompleted() const;
-    bool IsUnlocked() const;
-    void Unlock();
-
-    const std::string& GetTitle() const;
-    const std::string& GetDescription() const;
-    int GetCurrentProgress() const;
-    int GetRequiredProgress() const;
-    ObjectiveType GetType() const;
-    const std::string& GetTargetId() const;
-    void SetCurrentProgress(int progress);
+    bool completed;
 };

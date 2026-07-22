@@ -1,54 +1,53 @@
 #include "objective.h"
 
-Objective::Objective(const std::string& title, const std::string& description, ObjectiveType type, const std::string& targetId, int requiredProgress)
-{
-    this->title = title;
-    this->description = description;
-    this->type = type;
-    this->targetId = targetId;
-    this->requiredProgress = requiredProgress;
-    this->currentProgress = 0;
-    this->completed = false;
-    this->unlocked = false;
+Objective::Objective(const std::string& title, const std::string& description, ObjectiveType type, const std::string& targetId, int requiredAmount)
+    : title(title), description(description), type(type), targetId(targetId),
+      requiredAmount(requiredAmount), currentAmount(0), unlocked(false), completed(false) {}
+
+void Objective::Unlock() {
+    unlocked = true;
 }
 
-Objective::~Objective()
-{
+bool Objective::IsUnlocked() const {
+    return unlocked;
 }
 
-void Objective::ProcessEvent(ObjectiveType eventType, const std::string& eventId)
-{
-    if(completed) { return; }
-    if(!unlocked) { return; }
-    if(type != eventType) { return; }
-    if(targetId != eventId) { return; }
+bool Objective::IsCompleted() const {
+    return completed;
+}
 
-    currentProgress++;
+void Objective::ProcessEvent(ObjectiveType eventType, const std::string& eventId, int amount) {
+    if (!unlocked || completed) return;
 
-    if(currentProgress >= requiredProgress){
-        currentProgress = requiredProgress;
-        completed = true;
+    if (type == eventType && targetId == eventId) {
+        currentAmount += amount;
+        if (currentAmount >= requiredAmount) {
+            completed = true;
+        }
     }
 }
 
 void Objective::SetCurrentProgress(int progress) {
     if (!unlocked || completed) return;
-    currentProgress = progress;
-    if (currentProgress >= requiredProgress) {
-        currentProgress = requiredProgress;
+
+    currentAmount = progress;
+    if (currentAmount >= requiredAmount) {
         completed = true;
     }
 }
 
-bool Objective::IsCompleted() const { return completed; }
-bool Objective::IsUnlocked() const { return unlocked; }
-void Objective::Unlock(){ unlocked = true; }
+std::string Objective::GetTitle() const {
+    return title;
+}
 
-const std::string& Objective::GetTitle() const{ return title; }
-const std::string& Objective::GetDescription() const { return description; }
+std::string Objective::GetDescription() const {
+    return description;
+}
 
-int Objective::GetCurrentProgress() const{ return currentProgress; }
-int Objective::GetRequiredProgress() const{ return requiredProgress;}
+ObjectiveType Objective::GetType() const {
+    return type;
+}
 
-ObjectiveType Objective::GetType() const{ return type;}
-const std::string& Objective::GetTargetId() const{return targetId;}
+std::string Objective::GetTargetId() const {
+    return targetId;
+}
