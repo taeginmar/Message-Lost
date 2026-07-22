@@ -61,7 +61,15 @@ void Enemy::Update(float dt){
 }
 
 void Enemy::Update(float dt, const std::vector<Rectangle>& walls){
-    if(IsDead()) return;
+    if(IsDead()){
+        if(!deathHandled){
+            deathHandled = true;
+            OnDeath();
+        }
+        return;
+    }
+
+    deathHandled = false;
     
     if(targetPlayer == nullptr) return;
 
@@ -192,7 +200,7 @@ void Enemy::DoPatrolAction(float dt, const std::vector<Rectangle>& walls){
         moveX = (speed * moveDirection) * dt;
         MoveWithCollision(bounds, moveX, 0, walls);
 
-        float distanceFromSpawn = bounds.x = spawnPoint.x;
+        float distanceFromSpawn = bounds.x - spawnPoint.x;
         if(distanceFromSpawn > patrolRange){
             moveDirection = -1;
         }else if(distanceFromSpawn < -patrolRange){

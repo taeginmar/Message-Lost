@@ -16,7 +16,6 @@
 Zone* CreateZoneA(Player& player);
 Zone* CreateZoneB(Player& player, Zone* zoneA); // [ปรับแก้] รับ zoneA เพิ่มเติมเพื่อส่งต่อให้ MeetHelmuth
 void SetUpMockUpLevel(Level& level, Player& player);
-
 // Mission
 
 // Objective 1
@@ -49,8 +48,8 @@ private:
     bool eventReported;
 public:
     EnemyNeutralize(float x, float y, Player* player);
-    void Update(float dt) override;
     void Draw() override;
+    void OnDeath() override;
 };
 
 // Objective 5

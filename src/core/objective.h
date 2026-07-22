@@ -1,4 +1,5 @@
 #pragma once
+#include "raylib.h"
 #include <string>
 
 enum class ObjectiveType {

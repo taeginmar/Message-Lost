@@ -31,8 +31,11 @@ void Objective::SetCurrentProgress(int progress) {
     if (!unlocked || completed) return;
 
     currentAmount = progress;
+    TraceLog(LOG_INFO,"Objective %s progress %d/%d",title.c_str(),currentAmount, requiredAmount);
+
     if (currentAmount >= requiredAmount) {
         completed = true;
+        TraceLog(LOG_INFO,"%s COMPLETE",title.c_str());
     }
 }
 

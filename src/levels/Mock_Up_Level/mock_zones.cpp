@@ -9,16 +9,6 @@ extern Player* gPlayer;
 static Zone* gZoneA = nullptr;
 static bool gEnemiesSpawned = false;
 
-void UpdateMockUpLevel(float dt) {
-    if (gObjKillEnemies && gObjKillEnemies->IsUnlocked() && !gEnemiesSpawned) {
-        if (gZoneA != nullptr && gPlayer != nullptr) {
-            gZoneA->AddEnemy(new EnemyNeutralize(400.0f, 300.0f, gPlayer));
-            gZoneA->AddEnemy(new EnemyNeutralize(550.0f, 300.0f, gPlayer));
-            gEnemiesSpawned = true;
-        }
-    }
-}
-
 // Objective 1
 GeneratorBox::GeneratorBox(float x, float y)
     : Interactable(x, y, 40.0f, 40.0f, "Press E to Activate Generator"), isActivated(false) {}
@@ -59,16 +49,12 @@ EnemyNeutralize::EnemyNeutralize(float x, float y, Player* player)
             Enemy::NormalAction::IDLE, Enemy::PatrolType::HORIZONTAL,
             1, 150.0f, 40.0f), eventReported(false) {}
 
-void EnemyNeutralize::Update(float dt) {
-    if (IsDead()) {
-        if (!eventReported && gObjKillEnemies && gObjKillEnemies->IsUnlocked()) {
-            eventReported = true;
-            gObjectiveManager.ReportEvent(ObjectiveType::KILL, "enemy_guard");
-        }
-        return;
+void EnemyNeutralize::OnDeath(){
+    if(!eventReported && gObjKillEnemies->IsUnlocked()){
+        eventReported = true;
+        TraceLog(LOG_INFO,"Enemy Dead");
+        gObjectiveManager.ReportEvent(ObjectiveType::KILL,"enemy_guard");
     }
-
-    Enemy::Update(dt);
 }
 
 void EnemyNeutralize::Draw() {
@@ -82,8 +68,11 @@ void EnemyNeutralize::Draw() {
 FindExit::FindExit(float x, float y)
     : Interactable(x, y, 50.0f, 50.0f, "Press E to Exit Building") {}
 
-void FindExit::OnInteract() {
-    gObjectiveManager.ReportEvent(ObjectiveType::REACH_AREA, "exit_box");
+void FindExit::OnInteract(){
+    if(!gObjExitBuilding->IsUnlocked())
+        return;
+
+    gObjectiveManager.ReportEvent(ObjectiveType::REACH_AREA,"exit_box");
 }
 
 void FindExit::Draw() {
@@ -166,4 +155,13 @@ void SetUpMockUpLevel(Level& level, Player& player) {
     gObjectiveManager.AddObjective(gObjGatherItems);
     gObjectiveManager.AddObjective(gObjKillEnemies);
     gObjectiveManager.AddObjective(gObjExitBuilding);
+
+    gObjectiveManager.SetObjectiveUnlockedCallback([](Objective* objective){
+        if(objective->GetTitle() != "Clear the Corridor") return;
+        
+        TraceLog(LOG_INFO,"Spawn Enemy");
+        gZoneA->AddEnemy(new EnemyNeutralize(400,300,gPlayer));
+        gZoneA->AddEnemy(new EnemyNeutralize(550, 300,gPlayer));
+        }
+    );
 }

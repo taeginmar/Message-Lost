@@ -8,6 +8,18 @@ ObjectiveManager::~ObjectiveManager() {
     Clear();
 }
 
+void ObjectiveManager::CompleteObjective(size_t index)
+{
+    if(index + 1 >= objectives.size())
+        return;
+
+    objectives[index + 1]->Unlock();
+    TraceLog(LOG_INFO,"Unlock : %s",objectives[index+1]->GetTitle().c_str());
+
+    if(objectiveUnlockedCallback)
+        objectiveUnlockedCallback(objectives[index + 1]);
+}
+
 void ObjectiveManager::Clear() {
     for (Objective* objective : objectives) {
         delete objective;
@@ -29,10 +41,8 @@ void ObjectiveManager::ReportEvent(ObjectiveType eventType, const std::string& e
 
         objective->ProcessEvent(eventType, eventId, amount);
 
-        if (!wasCompleted && objective->IsCompleted()) {
-            if (i + 1 < objectives.size()) {
-                objectives[i + 1]->Unlock();
-            }
+        if(!wasCompleted && objective->IsCompleted()){
+            CompleteObjective(i);
         }
     }
 }
@@ -47,10 +57,8 @@ void ObjectiveManager::UpdateProgress(ObjectiveType eventType, const std::string
             objective->SetCurrentProgress(currentAmount);
         }
 
-        if (!wasCompleted && objective->IsCompleted()) {
-            if (i + 1 < objectives.size()) {
-                objectives[i + 1]->Unlock();
-            }
+        if(!wasCompleted && objective->IsCompleted()){
+            CompleteObjective(i);
         }
     }
 }
@@ -67,3 +75,5 @@ Objective* ObjectiveManager::GetCurrentObjective() const {
     }
     return nullptr;
 }
+
+void ObjectiveManager::SetObjectiveUnlockedCallback(std::function<void(Objective*)> callback) { objectiveUnlockedCallback = callback; }
